@@ -5,6 +5,7 @@ import './App.css'
 import axios from 'axios'
 import { Button } from '@mui/material'
 import CameraAltIcon from '@mui/icons-material'
+const api = import.meta.env.API_URL;
 
 function App() {
   const [count, setCount] = useState(0)
