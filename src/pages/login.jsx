@@ -1,4 +1,3 @@
-// Login.jsx
 import React, { useState } from 'react';
 import {
   Box,
@@ -22,7 +21,7 @@ import {
 import { styled } from '@mui/material/styles';
 import axios from 'axios';
 
-// Styled components for better design
+// Styled components
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
   display: 'flex',
@@ -65,7 +64,7 @@ const StyledButton = styled(Button)(({ theme }) => ({
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    cnpj: '',
+    usuario: '',
     password: ''
   });
   const [errors, setErrors] = useState({});
@@ -73,24 +72,11 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
 
-  // Format CNPJ as user types
-  const formatCNPJ = (value) => {
-    const numbers = value.replace(/\D/g, '');
-    return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
-  };
-
   const handleInputChange = (field) => (event) => {
-    let value = event.target.value;
-    
-    if (field === 'cnpj') {
-      value = formatCNPJ(value);
-      // Limit to 14 numbers
-      if (value.replace(/\D/g, '').length > 14) return;
-    }
-    
+    const value = event.target.value;
+
     setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // Clear errors when user starts typing
+
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -101,53 +87,49 @@ const Login = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    
-    if (!formData.cnpj.trim()) {
-      newErrors.cnpj = 'CNPJ é obrigatório';
-    } else if (formData.cnpj.replace(/\D/g, '').length !== 14) {
-      newErrors.cnpj = 'CNPJ deve ter 14 dígitos';
+
+    if (!formData.usuario.trim()) {
+      newErrors.usuario = 'Usuário é obrigatório';
     }
-    
+
     if (!formData.password.trim()) {
       newErrors.password = 'Senha é obrigatória';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     setLoading(true);
     setLoginError('');
-    
+
     try {
-      // Replace with your actual API endpoint
-      const response = await axios.post('/api/auth/login', {
-        cnpj: formData.cnpj.replace(/\D/g, ''), // Send only numbers
-        password: formData.password
-      });
-      
-      // Handle successful login
-      console.log('Login successful:', response.data);
-      
-      // Store token (adjust based on your API response)
-      if (response.data.token) {
-        localStorage.setItem('authToken', response.data.token);
-        // Redirect to dashboard or main app
-        window.location.href = '/dashboard';
-      }
-      
+      const params = new URLSearchParams();
+      params.append('grant_type', 'password');
+      params.append('client_id', 'bandvestapiv2');
+      params.append('client_secret', '4776436009');
+      params.append('username', formData.usuario);
+      params.append('password', formData.password);
+
+      const response = await axios.post(
+        'https://ws.facolchoes.com.br:9443/api/totvsmoda/authorization/v2/token',
+        params
+      );
+
+      const token = response.data.access_token;
+      localStorage.setItem('authToken', token);
+      window.location.href = '/dashboard';
+
     } catch (error) {
       console.error('Login error:', error);
-      
-      if (error.response?.status === 401) {
-        setLoginError('CNPJ ou senha incorretos');
-      } else if (error.response?.data?.message) {
-        setLoginError(error.response.data.message);
+
+      if (error.response?.status === 401 || error.response?.status === 400) {
+        setLoginError('Usuário ou senha incorretos');
       } else {
         setLoginError('Erro ao fazer login. Tente novamente.');
       }
@@ -157,13 +139,11 @@ const Login = () => {
   };
 
   const handleForgotPassword = () => {
-    // Navigate to forgot password page
-    console.log('Navigate to forgot password');
+    console.log('Navegar para recuperação de senha');
   };
 
   const handleRegister = () => {
-    // Navigate to registration page
-    console.log('Navigate to registration');
+    console.log('Navegar para cadastro');
   };
 
   return (
@@ -181,7 +161,7 @@ const Login = () => {
         >
           Entrar na Conta
         </Typography>
-        
+
         <Typography
           variant="body2"
           color="text.secondary"
@@ -191,8 +171,8 @@ const Login = () => {
         </Typography>
 
         {loginError && (
-          <Alert 
-            severity="error" 
+          <Alert
+            severity="error"
             sx={{ width: '100%', mb: 2, borderRadius: 2 }}
           >
             {loginError}
@@ -204,16 +184,16 @@ const Login = () => {
             margin="normal"
             required
             fullWidth
-            id="cnpj"
-            label="CNPJ"
-            name="cnpj"
+            id="usuario"
+            label="Usuário"
+            name="usuario"
             autoComplete="username"
             autoFocus
-            value={formData.cnpj}
-            onChange={handleInputChange('cnpj')}
-            error={!!errors.cnpj}
-            helperText={errors.cnpj}
-            placeholder="00.000.000/0000-00"
+            value={formData.usuario}
+            onChange={handleInputChange('usuario')}
+            error={!!errors.usuario}
+            helperText={errors.usuario}
+            placeholder="Digite seu usuário"
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -222,7 +202,7 @@ const Login = () => {
               ),
             }}
           />
-          
+
           <StyledTextField
             margin="normal"
             required
@@ -256,7 +236,7 @@ const Login = () => {
               ),
             }}
           />
-          
+
           <StyledButton
             type="submit"
             fullWidth
@@ -270,30 +250,30 @@ const Login = () => {
               'Entrar'
             )}
           </StyledButton>
-          
+
           <Box sx={{ textAlign: 'center', mt: 2 }}>
-            <typography variant="body2" color="text.secondary">
-                Esqueceu sua senha? {' '}
-            <Link
-              component="button"
-              variant="body2"
-              onClick={handleForgotPassword}
-              sx={{
-                textDecoration: 'none',
-                color: '#CB3B31',
-                fontWeight: 600,
-                '&:hover': {
-                  textDecoration: 'underline',
-                }
-              }}
-            >
-               Recuperar
-            </Link>
-            </typography>
+            <Typography variant="body2" color="text.secondary">
+              Esqueceu sua senha?{' '}
+              <Link
+                component="button"
+                variant="body2"
+                onClick={handleForgotPassword}
+                sx={{
+                  textDecoration: 'none',
+                  color: '#CB3B31',
+                  fontWeight: 600,
+                  '&:hover': {
+                    textDecoration: 'underline',
+                  }
+                }}
+              >
+                Recuperar
+              </Link>
+            </Typography>
           </Box>
-          
+
           <Box sx={{ textAlign: 'center', mt: 1 }}>
-            <typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary">
               Ainda não tem uma conta?{' '}
               <Link
                 component="button"
@@ -310,7 +290,7 @@ const Login = () => {
               >
                 Cadastre-se
               </Link>
-            </typography>
+            </Typography>
           </Box>
         </Box>
       </StyledPaper>
@@ -318,93 +298,4 @@ const Login = () => {
   );
 };
 
-
-
-// ================================
-// App.jsx (Main App Component)
-// ================================
-
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#CB3B31',
-    },
-    secondary: {
-      main: '#f44336',
-    },
-    background: {
-      default: '#f5f5f5',
-    },
-  },
-  typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-  },
-  shape: {
-    borderRadius: 8,
-  },
-});
-
-function App() {
-  return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Login />
-    </ThemeProvider>
-  );
-}
-
-export default App;
-
-// ================================
-// package.json dependencies
-// ================================
-
-/*
-{
-  "name": "login-app",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@emotion/react": "^11.11.1",
-    "@emotion/styled": "^11.11.0",
-    "@mui/icons-material": "^5.14.19",
-    "@mui/material": "^5.14.20",
-    "axios": "^1.6.2",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
-  },
-  "devDependencies": {
-    "@types/react": "^18.2.37",
-    "@types/react-dom": "^18.2.15",
-    "@vitejs/plugin-react": "^4.1.1",
-    "vite": "^5.0.0"
-  }
-}
-*/
-
-// ================================
-// Installation Commands
-// ================================
-
-/*
-# Create Vite React project
-npm create vite@latest login-app -- --template react
-cd login-app
-
-# Install Material-UI and dependencies
-npm install @mui/material @emotion/react @emotion/styled
-npm install @mui/icons-material
-npm install axios
-
-# Run development server
-npm run dev
-*/
+export default Login;
