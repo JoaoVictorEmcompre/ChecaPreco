@@ -1,27 +1,13 @@
 import React, { useState } from 'react';
 import {
-  Box,
-  Container,
-  Paper,
-  TextField,
-  Button,
-  Typography,
-  Link,
-  Alert,
-  CircularProgress,
-  InputAdornment,
-  IconButton
+  Box, Container, Paper, TextField, Button, Typography, Link,
+  Alert, CircularProgress, InputAdornment, IconButton
 } from '@mui/material';
-import {
-  Visibility,
-  VisibilityOff,
-  Person,
-  Lock
-} from '@mui/icons-material';
+import { Visibility, VisibilityOff, Person, Lock } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
-import axios from 'axios';
+import { login } from '../service/service'; // ajuste conforme nome do seu arquivo
 
-// Styled components
+// Estilos
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
   display: 'flex',
@@ -38,12 +24,8 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
     borderRadius: theme.spacing(3),
     backgroundColor: '#f5f5f5',
-    '&:hover': {
-      backgroundColor: '#eeeeee',
-    },
-    '&.Mui-focused': {
-      backgroundColor: '#ffffff',
-    },
+    '&:hover': { backgroundColor: '#eeeeee' },
+    '&.Mui-focused': { backgroundColor: '#ffffff' },
   },
 }));
 
@@ -62,11 +44,8 @@ const StyledButton = styled(Button)(({ theme }) => ({
   transition: 'all 0.3s ease',
 }));
 
-const Login = () => {
-  const [formData, setFormData] = useState({
-    usuario: '',
-    password: ''
-  });
+export default function Login() {
+  const [formData, setFormData] = useState({ usuario: '', password: '' });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -74,61 +53,34 @@ const Login = () => {
 
   const handleInputChange = (field) => (event) => {
     const value = event.target.value;
-
     setFormData(prev => ({ ...prev, [field]: value }));
-
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-    if (loginError) {
-      setLoginError('');
-    }
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
+    if (loginError) setLoginError('');
   };
 
   const validateForm = () => {
     const newErrors = {};
-
-    if (!formData.usuario.trim()) {
-      newErrors.usuario = 'Usuário é obrigatório';
-    }
-
-    if (!formData.password.trim()) {
-      newErrors.password = 'Senha é obrigatória';
-    }
-
+    if (!formData.usuario.trim()) newErrors.usuario = 'Usuário é obrigatório';
+    if (!formData.password.trim()) newErrors.password = 'Senha é obrigatória';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     if (!validateForm()) return;
 
     setLoading(true);
     setLoginError('');
 
     try {
-      const params = new URLSearchParams();
-      params.append('grant_type', 'password');
-      params.append('client_id', 'bandvestapiv2');
-      params.append('client_secret', '4776436009');
-      params.append('username', formData.usuario);
-      params.append('password', formData.password);
-
-      const response = await axios.post(
-        'https://ws.facolchoes.com.br:9443/api/totvsmoda/authorization/v2/token',
-        params
-      );
-
-      const token = response.data.access_token;
+      const data = await login(formData.usuario, formData.password);
+      const token = data.access_token;
       localStorage.setItem('authToken', token);
       window.location.href = '/dashboard';
-
     } catch (error) {
       console.error('Login error:', error);
-
-      if (error.response?.status === 401 || error.response?.status === 400) {
+      if (error.response?.status === 400 || error.response?.status === 401) {
         setLoginError('Usuário ou senha incorretos');
       } else {
         setLoginError('Erro ao fazer login. Tente novamente.');
@@ -138,57 +90,40 @@ const Login = () => {
     }
   };
 
-  const handleForgotPassword = () => {
-    console.log('Navegar para recuperação de senha');
-  };
-
-  const handleRegister = () => {
-    console.log('Navegar para cadastro');
-  };
-
   return (
     <Container component="main" maxWidth="sm">
       <StyledPaper elevation={6}>
-        <Typography
-          component="h1"
-          variant="h4"
-          sx={{
-            mb: 1,
-            fontWeight: 700,
-            color: '#CB3B31',
-            textAlign: 'center'
+
+        {/* ✅ LOGO NO TOPO */}
+        <img
+          src="/logo-bandfashion.png" // coloque o nome exato do arquivo no /public
+          alt="Bandfashion Logo"
+          style={{
+            width: '80px',
+            marginBottom: '1.5rem',
+            marginTop: '-0.5rem',
+            filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.15))'
           }}
-        >
+        />
+
+        <Typography variant="h4" sx={{ fontWeight: 700, color: '#CB3B31', textAlign: 'center', mb: 1 }}>
           Entrar na Conta
         </Typography>
 
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          sx={{ mb: 4, textAlign: 'center' }}
-        >
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 3 }}>
           Acesse sua conta empresarial
         </Typography>
 
         {loginError && (
-          <Alert
-            severity="error"
-            sx={{ width: '100%', mb: 2, borderRadius: 2 }}
-          >
+          <Alert severity="error" sx={{ width: '100%', borderRadius: 2, mb: 2 }}>
             {loginError}
           </Alert>
         )}
 
-        <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
+        <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}>
           <StyledTextField
-            margin="normal"
-            required
             fullWidth
-            id="usuario"
             label="Usuário"
-            name="usuario"
-            autoComplete="username"
-            autoFocus
             value={formData.usuario}
             onChange={handleInputChange('usuario')}
             error={!!errors.usuario}
@@ -204,14 +139,9 @@ const Login = () => {
           />
 
           <StyledTextField
-            margin="normal"
-            required
             fullWidth
-            name="password"
             label="Senha"
             type={showPassword ? 'text' : 'password'}
-            id="password"
-            autoComplete="current-password"
             value={formData.password}
             onChange={handleInputChange('password')}
             error={!!errors.password}
@@ -225,11 +155,7 @@ const Login = () => {
               ),
               endAdornment: (
                 <InputAdornment position="end">
-                  <IconButton
-                    aria-label="toggle password visibility"
-                    onClick={() => setShowPassword(!showPassword)}
-                    edge="end"
-                  >
+                  <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
                     {showPassword ? <VisibilityOff /> : <Visibility />}
                   </IconButton>
                 </InputAdornment>
@@ -237,65 +163,29 @@ const Login = () => {
             }}
           />
 
-          <StyledButton
-            type="submit"
-            fullWidth
-            variant="contained"
-            disabled={loading}
-            sx={{ mt: 3, mb: 2 }}
-          >
-            {loading ? (
-              <CircularProgress size={24} color="inherit" />
-            ) : (
-              'Entrar'
-            )}
+          <StyledButton type="submit" fullWidth variant="contained" disabled={loading}>
+            {loading ? <CircularProgress size={24} color="inherit" /> : 'Entrar'}
           </StyledButton>
+        </Box>
 
-          <Box sx={{ textAlign: 'center', mt: 2 }}>
-            <Typography variant="body2" color="text.secondary">
-              Esqueceu sua senha?{' '}
-              <Link
-                component="button"
-                variant="body2"
-                onClick={handleForgotPassword}
-                sx={{
-                  textDecoration: 'none',
-                  color: '#CB3B31',
-                  fontWeight: 600,
-                  '&:hover': {
-                    textDecoration: 'underline',
-                  }
-                }}
-              >
-                Recuperar
-              </Link>
-            </Typography>
-          </Box>
+        <Box sx={{ textAlign: 'center', mt: 3 }}>
+          <Typography variant="body2" color="text.secondary">
+            Esqueceu sua senha?{' '}
+            <Link component="button" variant="body2" onClick={() => {}}>
+              Recuperar
+            </Link>
+          </Typography>
+        </Box>
 
-          <Box sx={{ textAlign: 'center', mt: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-              Ainda não tem uma conta?{' '}
-              <Link
-                component="button"
-                variant="body2"
-                onClick={handleRegister}
-                sx={{
-                  textDecoration: 'none',
-                  color: '#CB3B31',
-                  fontWeight: 600,
-                  '&:hover': {
-                    textDecoration: 'underline',
-                  }
-                }}
-              >
-                Cadastre-se
-              </Link>
-            </Typography>
-          </Box>
+        <Box sx={{ textAlign: 'center', mt: 1 }}>
+          <Typography variant="body2" color="text.secondary">
+            Ainda não tem uma conta?{' '}
+            <Link component="button" variant="body2" onClick={() => {}}>
+              Cadastre-se
+            </Link>
+          </Typography>
         </Box>
       </StyledPaper>
     </Container>
   );
-};
-
-export default Login;
+}
