@@ -1,1 +1,0 @@
-// Onde vai ficar todos os arquivos de requisição
