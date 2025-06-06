@@ -1,28 +1,18 @@
-// Login.jsx
+// src/pages/Login.jsx
+
 import React, { useState } from 'react';
 import {
-  Box,
-  Container,
-  Paper,
-  TextField,
-  Button,
-  Typography,
-  Link,
-  Alert,
-  CircularProgress,
-  InputAdornment,
-  IconButton
+  Box, Container, Paper, TextField, Button, Typography, Link,
+  Alert, CircularProgress, InputAdornment, IconButton
 } from '@mui/material';
-import {
-  Visibility,
-  VisibilityOff,
-  Person,
-  Lock
-} from '@mui/icons-material';
+import { Visibility, VisibilityOff, Person, Lock } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
-import axios from 'axios';
 
-// Styled components for better design
+// Importando os serviços necessários
+import { login } from '../service/login.services';
+import { saveToken, saveUsername } from '../service/token';
+
+// --- ESTILOS (MANTIDOS EXATAMENTE COMO VOCÊ CRIOU) ---
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
   display: 'flex',
@@ -39,12 +29,8 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
     borderRadius: theme.spacing(3),
     backgroundColor: '#f5f5f5',
-    '&:hover': {
-      backgroundColor: '#eeeeee',
-    },
-    '&.Mui-focused': {
-      backgroundColor: '#ffffff',
-    },
+    '&:hover': { backgroundColor: '#eeeeee' },
+    '&.Mui-focused': { backgroundColor: '#ffffff' },
   },
 }));
 
@@ -63,157 +49,101 @@ const StyledButton = styled(Button)(({ theme }) => ({
   transition: 'all 0.3s ease',
 }));
 
-const Login = () => {
-  const [formData, setFormData] = useState({
-    cnpj: '',
-    password: ''
-  });
+
+// --- COMPONENTE DE LOGIN ---
+export default function Login() {
+  const [formData, setFormData] = useState({ usuario: '', password: '' });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
 
-  // Format CNPJ as user types
-  const formatCNPJ = (value) => {
-    const numbers = value.replace(/\D/g, '');
-    return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
-  };
-
   const handleInputChange = (field) => (event) => {
-    let value = event.target.value;
-    
-    if (field === 'cnpj') {
-      value = formatCNPJ(value);
-      // Limit to 14 numbers
-      if (value.replace(/\D/g, '').length > 14) return;
-    }
-    
+    const value = event.target.value;
     setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // Clear errors when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-    if (loginError) {
-      setLoginError('');
-    }
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
+    if (loginError) setLoginError('');
   };
 
   const validateForm = () => {
     const newErrors = {};
-    
-    if (!formData.cnpj.trim()) {
-      newErrors.cnpj = 'CNPJ é obrigatório';
-    } else if (formData.cnpj.replace(/\D/g, '').length !== 14) {
-      newErrors.cnpj = 'CNPJ deve ter 14 dígitos';
-    }
-    
-    if (!formData.password.trim()) {
-      newErrors.password = 'Senha é obrigatória';
-    }
-    
+    if (!formData.usuario.trim()) newErrors.usuario = 'Usuário é obrigatório';
+    if (!formData.password.trim()) newErrors.password = 'Senha é obrigatória';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     if (!validateForm()) return;
-    
+
     setLoading(true);
     setLoginError('');
-    
+
     try {
-      // Replace with your actual API endpoint
-      const response = await axios.post('/api/auth/login', {
-        cnpj: formData.cnpj.replace(/\D/g, ''), // Send only numbers
-        password: formData.password
-      });
+      const data = await login(formData.usuario, formData.password);
       
-      // Handle successful login
-      console.log('Login successful:', response.data);
-      
-      // Store token (adjust based on your API response)
-      if (response.data.token) {
-        localStorage.setItem('authToken', response.data.token);
-        // Redirect to dashboard or main app
+      // Supondo que a API retorna um objeto como { access_token: "...", access_username: "..." }
+      if (data.access_token && data.access_username) {
+        // Usa os serviços para salvar os dados no localStorage
+        saveToken(data.access_token);
+        saveUsername(data.access_username);
+        
+        // Redireciona para o painel principal
         window.location.href = '/dashboard';
+      } else {
+        // Caso a API retorne sucesso (200) mas sem os dados esperados
+        setLoginError('Resposta inválida do servidor.');
       }
-      
+
     } catch (error) {
       console.error('Login error:', error);
-      
-      if (error.response?.status === 401) {
-        setLoginError('CNPJ ou senha incorretos');
-      } else if (error.response?.data?.message) {
-        setLoginError(error.response.data.message);
+      if (error.response?.status === 400 || error.response?.status === 401) {
+        setLoginError('Usuário ou senha incorretos.');
       } else {
-        setLoginError('Erro ao fazer login. Tente novamente.');
+        setLoginError('Erro ao conectar com o servidor. Tente novamente.');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleForgotPassword = () => {
-    // Navigate to forgot password page
-    console.log('Navigate to forgot password');
-  };
-
-  const handleRegister = () => {
-    // Navigate to registration page
-    console.log('Navigate to registration');
-  };
-
   return (
     <Container component="main" maxWidth="sm">
       <StyledPaper elevation={6}>
-        <Typography
-          component="h1"
-          variant="h4"
-          sx={{
-            mb: 1,
-            fontWeight: 700,
-            color: '#CB3B31',
-            textAlign: 'center'
+        <img
+          src="/logo-bandfashion.png" // Garanta que este arquivo esteja na pasta /public
+          alt="Bandfashion Logo"
+          style={{
+            width: '80px',
+            marginBottom: '1.5rem',
+            marginTop: '-0.5rem',
+            filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.15))'
           }}
-        >
+        />
+        <Typography variant="h4" sx={{ fontWeight: 700, color: '#CB3B31', textAlign: 'center', mb: 1 }}>
           Entrar na Conta
         </Typography>
-        
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          sx={{ mb: 4, textAlign: 'center' }}
-        >
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 3 }}>
           Acesse sua conta empresarial
         </Typography>
 
         {loginError && (
-          <Alert 
-            severity="error" 
-            sx={{ width: '100%', mb: 2, borderRadius: 2 }}
-          >
+          <Alert severity="error" sx={{ width: '100%', borderRadius: 2, mb: 2 }}>
             {loginError}
           </Alert>
         )}
 
-        <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
+        <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}>
           <StyledTextField
-            margin="normal"
-            required
             fullWidth
-            id="cnpj"
-            label="CNPJ"
-            name="cnpj"
-            autoComplete="username"
-            autoFocus
-            value={formData.cnpj}
-            onChange={handleInputChange('cnpj')}
-            error={!!errors.cnpj}
-            helperText={errors.cnpj}
-            placeholder="00.000.000/0000-00"
+            label="Usuário"
+            value={formData.usuario}
+            onChange={handleInputChange('usuario')}
+            error={!!errors.usuario}
+            helperText={errors.usuario}
+            placeholder="Digite seu usuário"
+            disabled={loading}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -222,21 +152,17 @@ const Login = () => {
               ),
             }}
           />
-          
+
           <StyledTextField
-            margin="normal"
-            required
             fullWidth
-            name="password"
             label="Senha"
             type={showPassword ? 'text' : 'password'}
-            id="password"
-            autoComplete="current-password"
             value={formData.password}
             onChange={handleInputChange('password')}
             error={!!errors.password}
             helperText={errors.password}
             placeholder="Digite sua senha"
+            disabled={loading}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -245,166 +171,28 @@ const Login = () => {
               ),
               endAdornment: (
                 <InputAdornment position="end">
-                  <IconButton
-                    aria-label="toggle password visibility"
-                    onClick={() => setShowPassword(!showPassword)}
-                    edge="end"
-                  >
+                  <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
                     {showPassword ? <VisibilityOff /> : <Visibility />}
                   </IconButton>
                 </InputAdornment>
               ),
             }}
           />
-          
-          <StyledButton
-            type="submit"
-            fullWidth
-            variant="contained"
-            disabled={loading}
-            sx={{ mt: 3, mb: 2 }}
-          >
-            {loading ? (
-              <CircularProgress size={24} color="inherit" />
-            ) : (
-              'Entrar'
-            )}
+
+          <StyledButton type="submit" fullWidth variant="contained" disabled={loading}>
+            {loading ? <CircularProgress size={24} color="inherit" /> : 'Entrar'}
           </StyledButton>
-          
-          <Box sx={{ textAlign: 'center', mt: 2 }}>
-            <typography variant="body2" color="text.secondary">
-                Esqueceu sua senha? {' '}
-            <Link
-              component="button"
-              variant="body2"
-              onClick={handleForgotPassword}
-              sx={{
-                textDecoration: 'none',
-                color: '#CB3B31',
-                fontWeight: 600,
-                '&:hover': {
-                  textDecoration: 'underline',
-                }
-              }}
-            >
-               Recuperar
+        </Box>
+
+        <Box sx={{ textAlign: 'center', mt: 3 }}>
+          <Typography variant="body2" color="text.secondary">
+            Esqueceu sua senha?{' '}
+            <Link component="button" variant="body2" onClick={() => { /* Lógica de recuperação aqui */ }}>
+              Recuperar
             </Link>
-            </typography>
-          </Box>
-          
-          <Box sx={{ textAlign: 'center', mt: 1 }}>
-            <typography variant="body2" color="text.secondary">
-              Ainda não tem uma conta?{' '}
-              <Link
-                component="button"
-                variant="body2"
-                onClick={handleRegister}
-                sx={{
-                  textDecoration: 'none',
-                  color: '#CB3B31',
-                  fontWeight: 600,
-                  '&:hover': {
-                    textDecoration: 'underline',
-                  }
-                }}
-              >
-                Cadastre-se
-              </Link>
-            </typography>
-          </Box>
+          </Typography>
         </Box>
       </StyledPaper>
     </Container>
   );
-};
-
-
-
-// ================================
-// App.jsx (Main App Component)
-// ================================
-
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#CB3B31',
-    },
-    secondary: {
-      main: '#f44336',
-    },
-    background: {
-      default: '#f5f5f5',
-    },
-  },
-  typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-  },
-  shape: {
-    borderRadius: 8,
-  },
-});
-
-function App() {
-  return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Login />
-    </ThemeProvider>
-  );
 }
-
-export default App;
-
-// ================================
-// package.json dependencies
-// ================================
-
-/*
-{
-  "name": "login-app",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@emotion/react": "^11.11.1",
-    "@emotion/styled": "^11.11.0",
-    "@mui/icons-material": "^5.14.19",
-    "@mui/material": "^5.14.20",
-    "axios": "^1.6.2",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
-  },
-  "devDependencies": {
-    "@types/react": "^18.2.37",
-    "@types/react-dom": "^18.2.15",
-    "@vitejs/plugin-react": "^4.1.1",
-    "vite": "^5.0.0"
-  }
-}
-*/
-
-// ================================
-// Installation Commands
-// ================================
-
-/*
-# Create Vite React project
-npm create vite@latest login-app -- --template react
-cd login-app
-
-# Install Material-UI and dependencies
-npm install @mui/material @emotion/react @emotion/styled
-npm install @mui/icons-material
-npm install axios
-
-# Run development server
-npm run dev
-*/
