@@ -13,6 +13,8 @@ import { styled } from '@mui/material/styles';
 import { login } from '../service/login.services';
 import { saveToken, saveUsername } from '../service/token';
 
+import Logo from '../assets/logo-bf-red.png'
+
 // --- ESTILOS (MANTIDOS EXATAMENTE COMO VOCÊ CRIOU) ---
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
@@ -113,7 +115,7 @@ export default function Login() {
     <Container component="main" maxWidth="sm">
       <StyledPaper elevation={6}>
         <img
-          src="/logo-bandfashion.png" // Garanta que este arquivo esteja na pasta /public
+          src={Logo} // Garanta que este arquivo esteja na pasta /public
           alt="Bandfashion Logo"
           style={{
             width: '80px',

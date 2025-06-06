@@ -1,6 +1,6 @@
 import { Box, Typography, IconButton } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
-import Logo from '../assets/logo-bf.png';
+import Logo from '../assets/logo-bf-white.png';
 
 export default function Header({ username, onLogout }) {
   return (
