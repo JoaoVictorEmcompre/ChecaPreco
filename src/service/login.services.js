@@ -1,7 +1,6 @@
 // Onde vai ficar todos os arquivos de requisição// src/services/authService.js
 import axios from 'axios';
-
-const API_BASE_URL = 'https://ws.facolchoes.com.br:9443/api/totvsmoda';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const login = async (usuario, password) => {
   const params = new URLSearchParams();

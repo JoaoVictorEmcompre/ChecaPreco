@@ -1,3 +1,5 @@
+// src/pages/Login.jsx
+
 import React, { useState } from 'react';
 import {
   Box, Container, Paper, TextField, Button, Typography, Link,
@@ -5,9 +7,12 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff, Person, Lock } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
-import { login } from '../service/service'; // ajuste conforme nome do seu arquivo
 
-// Estilos
+// Importando os serviços necessários
+import { login } from '../service/login.services';
+import { saveToken, saveUsername } from '../service/token';
+
+// --- ESTILOS (MANTIDOS EXATAMENTE COMO VOCÊ CRIOU) ---
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
   display: 'flex',
@@ -44,6 +49,8 @@ const StyledButton = styled(Button)(({ theme }) => ({
   transition: 'all 0.3s ease',
 }));
 
+
+// --- COMPONENTE DE LOGIN ---
 export default function Login() {
   const [formData, setFormData] = useState({ usuario: '', password: '' });
   const [errors, setErrors] = useState({});
@@ -75,15 +82,26 @@ export default function Login() {
 
     try {
       const data = await login(formData.usuario, formData.password);
-      const token = data.access_token;
-      localStorage.setItem('authToken', token);
-      window.location.href = '/dashboard';
+      
+      // Supondo que a API retorna um objeto como { access_token: "...", access_username: "..." }
+      if (data.access_token && data.access_username) {
+        // Usa os serviços para salvar os dados no localStorage
+        saveToken(data.access_token);
+        saveUsername(data.access_username);
+        
+        // Redireciona para o painel principal
+        window.location.href = '/dashboard';
+      } else {
+        // Caso a API retorne sucesso (200) mas sem os dados esperados
+        setLoginError('Resposta inválida do servidor.');
+      }
+
     } catch (error) {
       console.error('Login error:', error);
       if (error.response?.status === 400 || error.response?.status === 401) {
-        setLoginError('Usuário ou senha incorretos');
+        setLoginError('Usuário ou senha incorretos.');
       } else {
-        setLoginError('Erro ao fazer login. Tente novamente.');
+        setLoginError('Erro ao conectar com o servidor. Tente novamente.');
       }
     } finally {
       setLoading(false);
@@ -93,10 +111,8 @@ export default function Login() {
   return (
     <Container component="main" maxWidth="sm">
       <StyledPaper elevation={6}>
-
-        {/* ✅ LOGO NO TOPO */}
         <img
-          src="/logo-bandfashion.png" // coloque o nome exato do arquivo no /public
+          src="/logo-bandfashion.png" // Garanta que este arquivo esteja na pasta /public
           alt="Bandfashion Logo"
           style={{
             width: '80px',
@@ -105,11 +121,9 @@ export default function Login() {
             filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.15))'
           }}
         />
-
         <Typography variant="h4" sx={{ fontWeight: 700, color: '#CB3B31', textAlign: 'center', mb: 1 }}>
           Entrar na Conta
         </Typography>
-
         <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 3 }}>
           Acesse sua conta empresarial
         </Typography>
@@ -129,6 +143,7 @@ export default function Login() {
             error={!!errors.usuario}
             helperText={errors.usuario}
             placeholder="Digite seu usuário"
+            disabled={loading}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -147,6 +162,7 @@ export default function Login() {
             error={!!errors.password}
             helperText={errors.password}
             placeholder="Digite sua senha"
+            disabled={loading}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -171,17 +187,8 @@ export default function Login() {
         <Box sx={{ textAlign: 'center', mt: 3 }}>
           <Typography variant="body2" color="text.secondary">
             Esqueceu sua senha?{' '}
-            <Link component="button" variant="body2" onClick={() => {}}>
+            <Link component="button" variant="body2" onClick={() => { /* Lógica de recuperação aqui */ }}>
               Recuperar
-            </Link>
-          </Typography>
-        </Box>
-
-        <Box sx={{ textAlign: 'center', mt: 1 }}>
-          <Typography variant="body2" color="text.secondary">
-            Ainda não tem uma conta?{' '}
-            <Link component="button" variant="body2" onClick={() => {}}>
-              Cadastre-se
             </Link>
           </Typography>
         </Box>
