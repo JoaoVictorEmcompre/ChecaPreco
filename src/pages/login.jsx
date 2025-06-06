@@ -1,24 +1,6 @@
-// Login.jsx
 import React, { useState } from 'react';
-import {
-  Box,
-  Container,
-  Paper,
-  TextField,
-  Button,
-  Typography,
-  Link,
-  Alert,
-  CircularProgress,
-  InputAdornment,
-  IconButton
-} from '@mui/material';
-import {
-  Visibility,
-  VisibilityOff,
-  Person,
-  Lock
-} from '@mui/icons-material';
+import { Box, Container, Paper, TextField, Button, Typography, Link, Alert, CircularProgress, InputAdornment, IconButton } from '@mui/material';
+import { Visibility, VisibilityOff, Person, Lock } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import axios from 'axios';
 
