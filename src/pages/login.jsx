@@ -272,8 +272,8 @@ const Login = () => {
           </StyledButton>
           
           <Box sx={{ textAlign: 'center', mt: 2 }}>
-            <typography variant="body2" color="text.secondary"></typography>
-                Esqueceu sua senha?
+            <typography variant="body2" color="text.secondary">
+                Esqueceu sua senha? {' '}
             <Link
               component="button"
               variant="body2"
@@ -281,6 +281,7 @@ const Login = () => {
               sx={{
                 textDecoration: 'none',
                 color: '#CB3B31',
+                fontWeight: 600,
                 '&:hover': {
                   textDecoration: 'underline',
                 }
@@ -288,10 +289,11 @@ const Login = () => {
             >
                Recuperar
             </Link>
+            </typography>
           </Box>
           
           <Box sx={{ textAlign: 'center', mt: 1 }}>
-            <Typography variant="body2" color="text.secondary">
+            <typography variant="body2" color="text.secondary">
               Ainda não tem uma conta?{' '}
               <Link
                 component="button"
@@ -308,7 +310,7 @@ const Login = () => {
               >
                 Cadastre-se
               </Link>
-            </Typography>
+            </typography>
           </Box>
         </Box>
       </StyledPaper>
