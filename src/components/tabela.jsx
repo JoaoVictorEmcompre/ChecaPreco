@@ -139,7 +139,7 @@ function TabelaPorCor({ grupo }) {
   );
 }
 
-export default function TabelaEstoque({ data }) {
+export default function TabelaEstoque({ data, preco }) {
   const agrupado = agruparPorReferencia(data);
   return (
     <>
@@ -149,6 +149,7 @@ export default function TabelaEstoque({ data }) {
         return (
           <div key={ref}>
             <h2>{nomeBase}</h2>
+            <h3>{preco}</h3>
             {tipo === "VAR_TAMANHO" && <TabelaPorTamanho grupo={grupo} />}
             {tipo === "VAR_COR" && <TabelaPorCor grupo={grupo} />}
             {tipo === "VAR_AMBOS" && <TabelaMatriz grupo={grupo} />}
