@@ -41,6 +41,9 @@ export default function HomePage() {
 
       const estoqueData = await getEstoque(precoData.referenceCode);
       setEstoque(estoqueData);
+
+      console.log(precoData.referenceCode)
+      console.log(estoqueData)
     } catch (error) {
       console.error('Erro ao buscar estoque:', error);
     }
@@ -68,8 +71,7 @@ export default function HomePage() {
             Resultado da busca por: <strong>{submittedEan}</strong>
           </Typography>
         )}
-        <h2>{preco}</h2>
-        <TabelaEstoque data={estoque} preco={preco} />
+        <TabelaEstoque data={estoque} preco={preco.price} />
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
   const [openScanner, setOpenScanner] = useState(false);
   const videoRef = useRef(null);
   const codeReader = useRef(null);
+  const inputRef = useRef(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -50,6 +51,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
           const texto = result.getText();
           onChange(texto);
           setTimeout(() => {
+            if(inputRef.current) inputRef.current.focus();
             onSubmit();
           }, 0);
           setOpenScanner(false);
@@ -87,6 +89,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
               const texto = result.getText();
               onChange(texto);
               setTimeout(() => {
+                if(inputRef.current) inputRef.current.focus();
                 onSubmit();
               }, 0);
               await stopScanner();
@@ -119,6 +122,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
           onSubmit={handleSubmit}
         >
           <InputBase
+            inputRef={inputRef}
             sx={{ ml: 1, flex: 1, fontSize: 14 }}
             placeholder="Escaneie ou digite o código do item"
             inputProps={{ 'aria-label': 'código de barras' }}

@@ -13,7 +13,7 @@ export const getEstoque = async (referenceCode) => {
 
   const body = {
     filter: {
-      referenceCode: [referenceCode],
+      groupCodeList: [referenceCode],
     },
     option: {
       balances: [

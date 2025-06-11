@@ -35,7 +35,9 @@ export const getPrecoPorGrupo = async (groupCode) => {
   });
 
   const item = response.data.items?.[0];
-  const preco = item?.prices?.[0]?.price;
 
-  return preco ?? null;
+  const preco = item?.prices?.[0]?.price ?? null;
+  const referenceCode = item?.referenceCode ?? null;
+
+  return { price: preco, referenceCode };
 };
