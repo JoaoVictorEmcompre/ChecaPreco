@@ -42,14 +42,49 @@ function identificarTipoGrupo(grupo) {
   return "FIXO";
 }
 
-function extrairNomeBase(productName, sizeName, colorName) {
-  let base = productName;
-  const cleanSize = sizeName?.trim().toUpperCase();
-  const cleanColor = colorName?.trim().toUpperCase();
-  base = base.toUpperCase();
-  if (cleanSize) base = base.replace(new RegExp(`\\b${cleanSize}\\b`, 'gi'), '').trim();
-  if (cleanColor) base = base.replace(new RegExp(`\\b${cleanColor}\\b`, 'gi'), '').trim();
-  return base.replace(/\s{2,}/g, ' ').trim();
+function formatarNomeProduto(productName, grupo, tipoVariacao) {
+  if (!productName || !grupo?.length) return '';
+
+  let nome = productName.toUpperCase();
+
+  const tamanhos = [...new Set(grupo.map(i => i.sizeName?.toUpperCase().trim()).filter(Boolean))];
+  const cores = [...new Set(grupo.map(i => i.colorName?.toUpperCase().trim()).filter(Boolean))];
+
+  // Decide o que remover
+  const removerTamanhos = tipoVariacao === 'VAR_TAMANHO' || tipoVariacao === 'VAR_AMBOS';
+  const removerCores = tipoVariacao === 'VAR_COR' || tipoVariacao === 'VAR_AMBOS';
+
+  if (removerTamanhos) {
+    tamanhos.forEach(tam => {
+      tam.split(/[-\s/]+/).forEach(p => {
+        nome = nome.replace(new RegExp(`\\b${p}\\b`, 'g'), '');
+      });
+    });
+  }
+
+  if (removerCores) {
+    cores.forEach(cor => {
+      cor.split(/[-\s/]+/).forEach(p => {
+        nome = nome.replace(new RegExp(`\\b${p}\\b`, 'g'), '');
+      });
+    });
+  }
+
+  nome = nome
+    .replace(/[-_.]/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  nome = nome
+    .split(' ')
+    .filter((val, idx, arr) => val !== arr[idx - 1])
+    .join(' ');
+
+  nome = nome
+    .toLowerCase()
+    .replace(/\b\w/g, l => l.toUpperCase());
+
+  return nome;
 }
 
 function TabelaMatriz({ grupo }) {
@@ -63,14 +98,13 @@ function TabelaMatriz({ grupo }) {
   });
   return (
     <Box sx={{ position: 'relative' }}>
-      <Typography variant="caption" sx={{ mb: 1, display: 'block', color: 'gray' }}>Arraste para o lado ↔</Typography>
+      <Typography variant="caption" sx={{ mb: 0.5, display: 'block', color: 'gray', fontSize: 14 }}>Arraste para o lado ↔</Typography>
       <TableContainer component={Paper} sx={{ mb: 4, overflowX: 'auto' }}>
         <Table>
           <TableHead>
             <TableRow>
-              <StyledTableCell>Cor / Tamanho</StyledTableCell>
-              {tamanhos.map(t => <StyledTableCell key={t} align="right">{t}</StyledTableCell>)}
-            </TableRow>
+              <StyledTableCell align='center'>Cor / Tamanho</StyledTableCell>
+              {tamanhos.map(t => <StyledTableCell key={t} align="right">{t}</StyledTableCell>)}</TableRow>
           </TableHead>
           <TableBody>
             {cores.map(cor => (
@@ -79,7 +113,7 @@ function TabelaMatriz({ grupo }) {
                 {tamanhos.map(t => {
                   const estoque = estoqueMap[`${cor}_${t}`];
                   return (
-                    <StyledTableCell key={t} align="right" sx={{ color: estoque === 0 ? 'gray' : 'inherit' }}>
+                    <StyledTableCell key={t} align="center" sx={{ color: estoque <= 0 ? 'red' : 'inherit', backgroundColor: estoque <= 0 ? '#fcf5ca' : '' }}>
                       {estoque ?? "-"}
                     </StyledTableCell>
                   );
@@ -100,16 +134,21 @@ function TabelaPorTamanho({ grupo }) {
         <TableHead>
           <TableRow>
             <StyledTableCell>Tamanho</StyledTableCell>
-            <StyledTableCell align="right">Estoque</StyledTableCell>
+            <StyledTableCell align="center">Estoque</StyledTableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {grupo.map((item, idx) => (
-            <StyledTableRow key={idx}>
-              <StyledTableCell>{item.sizeName}</StyledTableCell>
-              <StyledTableCell align="right">{item.balances?.[0]?.stock ?? 0}</StyledTableCell>
-            </StyledTableRow>
-          ))}
+          {grupo.map((item, idx) => {
+            const estoque = item.balances?.[0]?.stock ?? 0;
+            return (
+              <StyledTableRow key={idx}>
+                <StyledTableCell>{item.sizeName}</StyledTableCell>
+                <StyledTableCell align="center" sx={{ color: estoque <= 0 ? 'red' : 'inherit', backgroundColor: estoque <= 0 ? '#fcf5ca' : '', }} >
+                  {estoque}
+                </StyledTableCell>
+              </StyledTableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </TableContainer>
@@ -122,33 +161,69 @@ function TabelaPorCor({ grupo }) {
       <Table>
         <TableHead>
           <TableRow>
-            <StyledTableCell>Cor</StyledTableCell>
-            <StyledTableCell align="right">Estoque</StyledTableCell>
+            <StyledTableCell align='center'>Cor</StyledTableCell>
+            <StyledTableCell align="center">Estoque</StyledTableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {grupo.map((item, idx) => (
-            <StyledTableRow key={idx}>
-              <StyledTableCell>{item.colorName}</StyledTableCell>
-              <StyledTableCell align="right">{item.balances?.[0]?.stock ?? 0}</StyledTableCell>
-            </StyledTableRow>
-          ))}
+          {grupo.map((item, idx) => {
+            const estoque = item.balances?.[0]?.stock ?? 0;
+            return (
+              <StyledTableRow key={idx}>
+                <StyledTableCell>{item.colorName}</StyledTableCell>
+                <StyledTableCell align="center" sx={{ color: estoque <= 0 ? 'red' : 'inherit', backgroundColor: estoque <= 0 ? '#fcf5ca' : '', }} >
+                  {estoque}
+                </StyledTableCell>
+              </StyledTableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </TableContainer>
   );
 }
 
-export default function TabelaEstoque({ data }) {
+const formataPreco = (preco) => {
+  if (typeof preco !== 'number') return '';
+  return preco.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2
+  });
+};
+
+function calcularEstoqueTotal(grupo) {
+  return grupo.reduce((acc, item) => {
+    const estoque = item.balances?.[0]?.stock ?? 0;
+    return estoque > 0 ? acc + estoque : acc;
+  }, 0);
+}
+
+export default function TabelaEstoque({ data, preco }) {
   const agrupado = agruparPorReferencia(data);
   return (
     <>
       {Object.entries(agrupado).map(([ref, grupo]) => {
         const tipo = identificarTipoGrupo(grupo);
-        const nomeBase = extrairNomeBase(grupo[0].productName, grupo[0].sizeName, grupo[0].colorName);
+        const nomeBase = formatarNomeProduto(grupo[0].productName, grupo, tipo);
         return (
           <div key={ref}>
-            <h2>{nomeBase}</h2>
+            <Typography variant="h1" sx={{ mb: 2, fontWeight: '500', fontSize: 34 }}>
+              {nomeBase}
+            </Typography>
+
+            <Typography variant="h1" sx={{ mb: 0, fontWeight: '600', fontSize: 36 }}>
+              {formataPreco(preco)}
+            </Typography>
+
+            <Typography variant='h3' sx={{ mb: 2, fontWeight: '500', fontSize: 15 }}>
+              Preço líquido para você
+            </Typography>
+
+            <Typography variant='h2' sx={{ mb: 1, fontSize: 24 }}>
+              {calcularEstoqueTotal(grupo)} unidades disponíveis!
+            </Typography>
+
             {tipo === "VAR_TAMANHO" && <TabelaPorTamanho grupo={grupo} />}
             {tipo === "VAR_COR" && <TabelaPorCor grupo={grupo} />}
             {tipo === "VAR_AMBOS" && <TabelaMatriz grupo={grupo} />}

@@ -1,15 +1,18 @@
-// Onde vai ficar todos os arquivos de requisição// src/services/authService.js
 import axios from 'axios';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+const API_BASE = import.meta.env.VITE_API_LOGIN;
+const CLIENT_ID = import.meta.env.VITE_CLIENT_ID;
+const CLIENT_SECRET = import.meta.env.VITE_CLIENT_SECRET;
 
 export const login = async (usuario, password) => {
-  const params = new URLSearchParams();
-  params.append('grant_type', 'password');
-  params.append('client_id', 'bandvestapiv2');
-  params.append('client_secret', '4776436009');
-  params.append('username', usuario);
-  params.append('password', password);
+  const params = new URLSearchParams({
+    grant_type: 'password',
+    client_id: CLIENT_ID,
+    client_secret: CLIENT_SECRET,
+    username: usuario,
+    password: password,
+  });
 
-  const response = await axios.post(`${API_BASE_URL}/authorization/v2/token`, params);
+  const response = await axios.post(`${API_BASE}/authorization/v2/token`, params);
   return response.data;
 };
