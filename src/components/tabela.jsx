@@ -98,7 +98,7 @@ function TabelaMatriz({ grupo }) {
   });
   return (
     <Box sx={{ position: 'relative' }}>
-      <Typography variant="caption" sx={{ mb: 1, display: 'block', color: 'gray' }}>Arraste para o lado ↔</Typography>
+      <Typography variant="caption" sx={{ mb: 0.5, display: 'block', color: 'gray', fontSize: 14 }}>Arraste para o lado ↔</Typography>
       <TableContainer component={Paper} sx={{ mb: 4, overflowX: 'auto' }}>
         <Table>
           <TableHead>
@@ -113,7 +113,7 @@ function TabelaMatriz({ grupo }) {
                 {tamanhos.map(t => {
                   const estoque = estoqueMap[`${cor}_${t}`];
                   return (
-                    <StyledTableCell key={t} align="center" sx={{ color: estoque === 0 ? 'red' : 'inherit', backgroundColor: estoque === 0 ? 'yellow' : '' }}>
+                    <StyledTableCell key={t} align="center" sx={{ color: estoque <= 0 ? 'red' : 'inherit', backgroundColor: estoque <= 0 ? '#fcf5ca' : '' }}>
                       {estoque ?? "-"}
                     </StyledTableCell>
                   );
@@ -138,12 +138,17 @@ function TabelaPorTamanho({ grupo }) {
           </TableRow>
         </TableHead>
         <TableBody>
-          {grupo.map((item, idx) => (
-            <StyledTableRow key={idx}>
-              <StyledTableCell>{item.sizeName}</StyledTableCell>
-              <StyledTableCell align="center">{item.balances?.[0]?.stock ?? 0}</StyledTableCell>
-            </StyledTableRow>
-          ))}
+          {grupo.map((item, idx) => {
+            const estoque = item.balances?.[0]?.stock ?? 0;
+            return (
+              <StyledTableRow key={idx}>
+                <StyledTableCell>{item.sizeName}</StyledTableCell>
+                <StyledTableCell align="center" sx={{ color: estoque <= 0 ? 'red' : 'inherit', backgroundColor: estoque <= 0 ? '#fcf5ca' : '', }} >
+                  {estoque}
+                </StyledTableCell>
+              </StyledTableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </TableContainer>
@@ -156,17 +161,22 @@ function TabelaPorCor({ grupo }) {
       <Table>
         <TableHead>
           <TableRow>
-            <StyledTableCell align='center' >Cor</StyledTableCell>
+            <StyledTableCell align='center'>Cor</StyledTableCell>
             <StyledTableCell align="center">Estoque</StyledTableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {grupo.map((item, idx) => (
-            <StyledTableRow key={idx}>
-              <StyledTableCell>{item.colorName}</StyledTableCell>
-              <StyledTableCell align="center">{item.balances?.[0]?.stock ?? 0}</StyledTableCell>
-            </StyledTableRow>
-          ))}
+          {grupo.map((item, idx) => {
+            const estoque = item.balances?.[0]?.stock ?? 0;
+            return (
+              <StyledTableRow key={idx}>
+                <StyledTableCell>{item.colorName}</StyledTableCell>
+                <StyledTableCell align="center" sx={{ color: estoque <= 0 ? 'red' : 'inherit', backgroundColor: estoque <= 0 ? '#fcf5ca' : '', }} >
+                  {estoque}
+                </StyledTableCell>
+              </StyledTableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </TableContainer>
@@ -182,6 +192,13 @@ const formataPreco = (preco) => {
   });
 };
 
+function calcularEstoqueTotal(grupo) {
+  return grupo.reduce((acc, item) => {
+    const estoque = item.balances?.[0]?.stock ?? 0;
+    return estoque > 0 ? acc + estoque : acc;
+  }, 0);
+}
+
 export default function TabelaEstoque({ data, preco }) {
   const agrupado = agruparPorReferencia(data);
   return (
@@ -191,8 +208,22 @@ export default function TabelaEstoque({ data, preco }) {
         const nomeBase = formatarNomeProduto(grupo[0].productName, grupo, tipo);
         return (
           <div key={ref}>
-            <Typography variant="h4" sx={{ mb: 2, fontWeight: '500' }}>{nomeBase}</Typography>
-            <Typography variant="h4" sx={{ mb: 2, fontWeight: '600' }}>{formataPreco(preco)}</Typography>
+            <Typography variant="h1" sx={{ mb: 2, fontWeight: '500', fontSize: 34 }}>
+              {nomeBase}
+            </Typography>
+
+            <Typography variant="h1" sx={{ mb: 0, fontWeight: '600', fontSize: 36 }}>
+              {formataPreco(preco)}
+            </Typography>
+
+            <Typography variant='h3' sx={{ mb: 2, fontWeight: '500', fontSize: 15 }}>
+              Preço líquido para você
+            </Typography>
+
+            <Typography variant='h2' sx={{ mb: 1, fontSize: 24 }}>
+              {calcularEstoqueTotal(grupo)} unidades disponíveis!
+            </Typography>
+
             {tipo === "VAR_TAMANHO" && <TabelaPorTamanho grupo={grupo} />}
             {tipo === "VAR_COR" && <TabelaPorCor grupo={grupo} />}
             {tipo === "VAR_AMBOS" && <TabelaMatriz grupo={grupo} />}

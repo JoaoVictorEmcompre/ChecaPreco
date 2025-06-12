@@ -24,30 +24,39 @@ export default function HomePage() {
     }
   }, [navigate]);
 
-  const isEan = (codigo) => /^\d{11,}$/.test(codigo); // 11+ dígitos = EAN
+  const isEan = (codigo) => /^\d{13,}$/.test(codigo); // 11+ dígitos = EAN
 
-  const handleSearch = async () => {
-    setSubmittedEan(ean);
+  const handleSearch = async (valor) => {
+    if (!valor || valor.trim() === '') {
+      setEan('');
+      setSubmittedEan('');
+      setPreco(null);
+      setEstoque([]);
+      return;
+    }
 
-    if (isEan(ean)) {
-      console.log('É EAN. Requisição será feita futuramente.');
+    setEan(valor);
+    setSubmittedEan(valor);
+
+    if (isEan(valor)) {
+      console.log('O código digitado é um EAN, em breve finalizaremos a pesquisa por EAN.');
       setEstoque([]);
       return;
     }
 
     try {
-      const precoData = await getPrecoPorGrupo(ean);
+      const precoData = await getPrecoPorGrupo(valor);
       setPreco(precoData);
 
       const estoqueData = await getEstoque(precoData.referenceCode);
       setEstoque(estoqueData);
-
-      console.log(precoData.referenceCode)
-      console.log(estoqueData)
     } catch (error) {
       console.error('Erro ao buscar estoque:', error);
+      setPreco(null);
+      setEstoque([]);
     }
   };
+
 
   const handleLogout = () => {
     localStorage.removeItem('username');
@@ -71,7 +80,7 @@ export default function HomePage() {
             Resultado da busca por: <strong>{submittedEan}</strong>
           </Typography>
         )}
-        <TabelaEstoque data={estoque} preco={preco.price} />
+        <TabelaEstoque data={estoque} preco={preco?.price} />
       </div>
     </div>
   );

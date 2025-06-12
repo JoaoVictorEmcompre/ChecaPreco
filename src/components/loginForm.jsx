@@ -38,7 +38,6 @@ export default function Login() {
 
     try {
       const data = await login(formData.usuario, formData.password);
-      console.log('Resposta da API:', data);
 
       if (data.access_token) {
         saveToken(data.access_token);

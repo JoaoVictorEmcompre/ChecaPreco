@@ -1,37 +1,79 @@
 import { useState, useEffect, useRef } from 'react';
-import { Paper, InputBase, IconButton, Box, Dialog, DialogContent, Typography, Button } from '@mui/material';
+import {
+  Paper, InputBase, IconButton, Box, Dialog, DialogContent, Typography, Button, MenuItem, Select
+} from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
+import CloseIcon from '@mui/icons-material/Close';
+import UploadIcon from '@mui/icons-material/Upload';
 import { BrowserMultiFormatReader } from '@zxing/browser';
+import { DecodeHintType, BarcodeFormat } from '@zxing/library';
 
 export default function CampoDeBusca({ value, onChange, onSubmit }) {
   const [openScanner, setOpenScanner] = useState(false);
+  const [videoDevices, setVideoDevices] = useState([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState('');
   const videoRef = useRef(null);
   const codeReader = useRef(null);
   const inputRef = useRef(null);
+  const alreadyDetected = useRef(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit();
+    onSubmit(value);
   };
 
   const stopScanner = async () => {
+    alreadyDetected.current = false;
     try {
       if (codeReader.current) {
-        await codeReader.current.reset();
+        if (typeof codeReader.current.reset === 'function') {
+          await codeReader.current.reset();
+        } else if (typeof codeReader.current.stopStreams === 'function') {
+          codeReader.current.stopStreams();
+        }
         codeReader.current = null;
       }
 
       const video = videoRef.current;
-      if (video && video.srcObject) {
+      if (video?.srcObject) {
         video.srcObject.getTracks().forEach((track) => track.stop());
         video.srcObject = null;
       }
-
-      setOpenScanner(false);
     } catch (err) {
       console.error("Erro ao parar scanner:", err);
-      setOpenScanner(false);
+    }
+  };
+
+  const startScanner = async (deviceId) => {
+    try {
+      await stopScanner();
+
+      const hints = new Map();
+      hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13]);
+      hints.set(DecodeHintType.TRY_HARDER, true);
+
+      codeReader.current = new BrowserMultiFormatReader(hints);
+
+      await codeReader.current.decodeFromVideoDevice(
+        deviceId,
+        videoRef.current,
+        async (result, err) => {
+          if (result && !alreadyDetected.current) {
+            alreadyDetected.current = true;
+            const texto = result.getText();
+            onChange(texto);
+            setTimeout(() => {
+              if (inputRef.current) inputRef.current.focus();
+              onSubmit(texto);
+            }, 0);
+            setOpenScanner(false);
+          }
+        }
+      );
+    } catch (err) {
+      console.error("Erro ao iniciar scanner:", err);
+      alert("Erro ao iniciar o scanner.");
     }
   };
 
@@ -46,18 +88,21 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
 
       img.onload = async () => {
         try {
-          const reader = new BrowserMultiFormatReader();
+          const hints = new Map();
+          hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13]);
+
+          const reader = new BrowserMultiFormatReader(hints);
           const result = await reader.decodeFromImageElement(img);
           const texto = result.getText();
           onChange(texto);
           setTimeout(() => {
-            if(inputRef.current) inputRef.current.focus();
-            onSubmit();
+            if (inputRef.current) inputRef.current.focus();
+            onSubmit(texto);
           }, 0);
           setOpenScanner(false);
         } catch (err) {
           console.warn("Código não detectado na imagem.");
-          alert("Não foi possível detectar um código de barras na imagem.");
+          alert("Não foi possível detectar um código de barras EAN-13 na imagem.");
         }
       };
     } catch (err) {
@@ -68,43 +113,29 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
   useEffect(() => {
     if (!openScanner) return;
 
-    const initScanner = async () => {
+    const fetchDevicesAndStart = async () => {
       try {
-        codeReader.current = new BrowserMultiFormatReader();
-
         const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-        if (!devices.length) {
-          alert("Nenhuma câmera foi detectada.");
-          setOpenScanner(false);
-          return;
-        }
+        setVideoDevices(devices);
 
-        const selectedDeviceId = devices[0].deviceId;
-
-        await codeReader.current.decodeFromVideoDevice(
-          selectedDeviceId,
-          videoRef.current,
-          async (result, err) => {
-            if (result) {
-              const texto = result.getText();
-              onChange(texto);
-              setTimeout(() => {
-                if(inputRef.current) inputRef.current.focus();
-                onSubmit();
-              }, 0);
-              await stopScanner();
-            }
-          }
-        );
+        const defaultDevice = devices[0];
+        setSelectedDeviceId(defaultDevice.deviceId);
+        await startScanner(defaultDevice.deviceId);
       } catch (err) {
-        console.error("Erro ao iniciar scanner:", err);
-        alert("Erro ao iniciar o scanner.");
+        console.error("Erro ao acessar câmeras:", err);
+        alert("Erro ao acessar as câmeras.");
         setOpenScanner(false);
       }
     };
 
-    initScanner();
+    fetchDevicesAndStart();
   }, [openScanner]);
+
+  useEffect(() => {
+    if (selectedDeviceId && openScanner) {
+      startScanner(selectedDeviceId);
+    }
+  }, [selectedDeviceId]);
 
   return (
     <>
@@ -138,42 +169,68 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
         </Paper>
       </Box>
 
-      <Dialog open={openScanner} onClose={stopScanner} maxWidth="sm" fullWidth>
-        <DialogContent>
-          <Typography variant="subtitle2" sx={{ mb: 2, textAlign: 'center' }}>
-            Posicione o código de barras na área abaixo
+      <Dialog open={openScanner} onClose={() => { stopScanner(); setOpenScanner(false); }} maxWidth="sm" fullWidth>
+        <DialogContent sx={{ position: 'relative', p: 3 }}>
+          <IconButton
+            onClick={() => { stopScanner(); setOpenScanner(false); }}
+            sx={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              backgroundColor: '#f0f0f0',
+              '&:hover': { backgroundColor: '#e0e0e0' },
+              zIndex: 10,
+            }}
+            aria-label="Fechar"
+          >
+            <CloseIcon />
+          </IconButton>
+
+          <Typography variant="h6" sx={{ mt: 3, mb: 2, textAlign: 'center', fontWeight: 600 }}>
+            Posicione o código de barras no campo abaixo
           </Typography>
 
-          <video ref={videoRef} style={{ width: '100%', height: 'auto' }} />
+          {videoDevices.length > 1 && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                Escolha a câmera:
+              </Typography>
+              <Select
+                fullWidth
+                value={selectedDeviceId}
+                onChange={(e) => setSelectedDeviceId(e.target.value)}
+                MenuProps={{ disablePortal: true }}
+              >
+                {videoDevices.map((device, idx) => (
+                  <MenuItem key={device.deviceId} value={device.deviceId}>
+                    {device.label || `Câmera ${idx + 1}`}
+                  </MenuItem>
+                ))}
+              </Select>
+            </Box>
+          )}
+
+          <video
+            ref={videoRef}
+            style={{
+              width: '100%',
+              height: 'auto',
+              borderRadius: 10,
+              border: '2px solid #ddd',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+            }}
+          />
 
           <Box
             sx={{
               mt: 3,
               display: 'flex',
-              justifyContent: 'center',
+              flexDirection: 'column',
+              alignItems: 'center',
               gap: 2,
-              flexWrap: 'wrap'
             }}
           >
-            <Button
-              variant="contained"
-              onClick={stopScanner}
-              sx={{
-                backgroundColor: '#CB3B31',
-                color: '#fff',
-                px: 3,
-                py: 1,
-                borderRadius: 3,
-                fontWeight: 600,
-                '&:hover': {
-                  backgroundColor: '#b71c1c'
-                }
-              }}
-            >
-              Fechar Scanner
-            </Button>
-
-            <label htmlFor="upload-image">
+            <label htmlFor="upload-image" style={{ width: '100%' }}>
               <input
                 accept="image/*"
                 id="upload-image"
@@ -182,25 +239,27 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
                 onChange={handleImageUpload}
               />
               <Button
-                variant="contained"
+                variant="outlined"
+                fullWidth
                 component="span"
+                startIcon={<UploadIcon />}
                 sx={{
-                  backgroundColor: '#CB3B31',
-                  color: '#fff',
-                  px: 3,
-                  py: 1,
-                  borderRadius: 3,
+                  borderRadius: 6,
+                  borderColor: '#CB3B31',
+                  color: '#CB3B31',
                   fontWeight: 600,
+                  textAlign: 'center',
                   '&:hover': {
-                    backgroundColor: '#b71c1c'
-                  }
+                    backgroundColor: '#fdecea',
+                    borderColor: '#b71c1c',
+                    color: '#b71c1c',
+                  },
                 }}
               >
-                Carregar Imagem
+                Carregar Imagem do Código
               </Button>
             </label>
           </Box>
-
         </DialogContent>
       </Dialog>
     </>
