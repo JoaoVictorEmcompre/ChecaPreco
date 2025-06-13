@@ -6,7 +6,7 @@ import { saveToken } from '../service/token';
 
 import LoginWrapper from './loginWrapper';
 import UsuarioField from './usuarioField';
-import SenhaField from '../components/senhaField'
+import SenhaField from './senhaField'
 
 export default function Login() {
   const [formData, setFormData] = useState({ usuario: '', password: '' });
@@ -41,7 +41,7 @@ export default function Login() {
 
       if (data.access_token) {
         saveToken(data.access_token);
-        localStorage.setItem('username',formData.usuario)
+        sessionStorage.setItem('username',formData.usuario)
         window.location.href = '/';
       } else {
         setLoginError('Resposta inválida do servidor.');
