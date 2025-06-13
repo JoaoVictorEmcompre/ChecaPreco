@@ -12,7 +12,7 @@ const app = express();
 // Middlewares globais
 app.use(cors());
 app.use(express.json());
-app.use(morgan('dev')); // Log detalhado de requisições no terminal
+app.use(morgan('dev'));
 
 // Rotas da API
 app.use('/api/login', loginRoutes);

@@ -16,7 +16,7 @@ export default function HomePage() {
   const [preco, setPreco] = useState([]);
 
   useEffect(() => {
-    const user = localStorage.getItem('username');
+    const user = sessionStorage.getItem('username');
     if (!user) {
       navigate('/Login');
     } else {
@@ -59,8 +59,8 @@ export default function HomePage() {
 
 
   const handleLogout = () => {
-    localStorage.removeItem('username');
-    localStorage.removeItem('access_token');
+    sessionStorage.removeItem('username');
+    sessionStorage.removeItem('access_token');
     navigate('/Login');
   };
 

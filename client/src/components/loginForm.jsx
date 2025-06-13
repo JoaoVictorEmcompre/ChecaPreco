@@ -41,7 +41,7 @@ export default function Login() {
 
       if (data.access_token) {
         saveToken(data.access_token);
-        localStorage.setItem('username',formData.usuario)
+        sessionStorage.setItem('username',formData.usuario)
         window.location.href = '/';
       } else {
         setLoginError('Resposta inválida do servidor.');
