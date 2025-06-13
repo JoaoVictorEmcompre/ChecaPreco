@@ -6,7 +6,7 @@ import { saveToken } from '../service/token';
 
 import LoginWrapper from './loginWrapper';
 import UsuarioField from './usuarioField';
-import SenhaField from '../components/senhaField'
+import SenhaField from './senhaField'
 
 export default function Login() {
   const [formData, setFormData] = useState({ usuario: '', password: '' });
