@@ -6,6 +6,7 @@ import Header from '../components/header';
 import { useNavigate } from 'react-router-dom';
 import { getPrecoPorGrupo } from '../service/price.services';
 import { getEstoque } from '../service/stock.services';
+import { getSku } from '../service/ean';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ export default function HomePage() {
     }
   }, [navigate]);
 
-  const isEan = (codigo) => /^\d{13,}$/.test(codigo); // 11+ dígitos = EAN
+  const isEan = (codigo) => /^\d{13,}$/.test(codigo); // 13+ dígitos = EAN
 
   const handleSearch = async (valor) => {
     if (!valor || valor.trim() === '') {
@@ -39,8 +40,13 @@ export default function HomePage() {
     setSubmittedEan(valor);
 
     if (isEan(valor)) {
-      console.log('O código digitado é um EAN, em breve finalizaremos a pesquisa por EAN.');
-      setEstoque([]);
+      const sku = await getSku(valor);
+
+      const precoData = await getPrecoPorGrupo(sku);
+      setPreco(precoData);
+
+      const estoqueData = await getEstoque(precoData.referenceCode);
+      setEstoque(estoqueData);
       return;
     }
 

@@ -47,6 +47,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
 
   const startScanner = async (deviceId) => {
     try {
+      alreadyDetected.current = false;
       await stopScanner();
 
       const hints = new Map();

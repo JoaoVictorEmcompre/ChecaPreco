@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getToken } from './token'; // você ainda pode manter isso se necessário
+import { getToken } from './token';
 
 export const getPrecoPorGrupo = async (groupCode) => {
   const token = getToken();

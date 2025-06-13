@@ -14,14 +14,27 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
     backgroundColor: '#CB3B31',
     color: theme.palette.common.white,
     border: '1px solid black',
+    fontWeight: 600,
+    fontSize: 14,
+    textAlign: 'center',
   },
   [`&.${tableCellClasses.body}`]: {
-    fontSize: 12,
+    fontSize: 13,
     border: '1px solid black',
+    padding: '8px 12px',
   },
 }));
 
-const StyledTableRow = styled(TableRow)(() => ({}));
+
+const StyledTableRow = styled(TableRow)(() => ({
+  '&:nth-of-type(odd)': {
+    backgroundColor: '#fcfcfc',
+  },
+  '&:hover': {
+    backgroundColor: '#f5f5f5',
+  },
+}));
+
 
 function agruparPorReferencia(items) {
   const grupos = {};
@@ -113,7 +126,11 @@ function TabelaMatriz({ grupo }) {
                 {tamanhos.map(t => {
                   const estoque = estoqueMap[`${cor}_${t}`];
                   return (
-                    <StyledTableCell key={t} align="center" sx={{ color: estoque <= 0 ? 'red' : 'inherit', backgroundColor: estoque <= 0 ? '#fcf5ca' : '' }}>
+                    <StyledTableCell key={t} align="center" sx={{
+                      color: estoque <= 0 ? '#CB3B31' : 'inherit',
+                      backgroundColor: estoque <= 0 ? '#fcf5ca' : 'inherit',
+                      fontWeight: estoque <= 0 ? 600 : 400,
+                    }}>
                       {estoque ?? "-"}
                     </StyledTableCell>
                   );
@@ -143,7 +160,11 @@ function TabelaPorTamanho({ grupo }) {
             return (
               <StyledTableRow key={idx}>
                 <StyledTableCell>{item.sizeName}</StyledTableCell>
-                <StyledTableCell align="center" sx={{ color: estoque <= 0 ? 'red' : 'inherit', backgroundColor: estoque <= 0 ? '#fcf5ca' : '', }} >
+                <StyledTableCell align="center" sx={{
+                  color: estoque <= 0 ? '#CB3B31' : 'inherit',
+                  backgroundColor: estoque <= 0 ? '#fcf5ca' : 'inherit',
+                  fontWeight: estoque <= 0 ? 600 : 400,
+                }} >
                   {estoque}
                 </StyledTableCell>
               </StyledTableRow>
@@ -171,7 +192,11 @@ function TabelaPorCor({ grupo }) {
             return (
               <StyledTableRow key={idx}>
                 <StyledTableCell>{item.colorName}</StyledTableCell>
-                <StyledTableCell align="center" sx={{ color: estoque <= 0 ? 'red' : 'inherit', backgroundColor: estoque <= 0 ? '#fcf5ca' : '', }} >
+                <StyledTableCell align="center" sx={{
+                  color: estoque <= 0 ? '#CB3B31' : 'inherit',
+                  backgroundColor: estoque <= 0 ? '#fcf5ca' : 'inherit',
+                  fontWeight: estoque <= 0 ? 600 : 400,
+                }} >
                   {estoque}
                 </StyledTableCell>
               </StyledTableRow>
@@ -208,19 +233,19 @@ export default function TabelaEstoque({ data, preco }) {
         const nomeBase = formatarNomeProduto(grupo[0].productName, grupo, tipo);
         return (
           <div key={ref}>
-            <Typography variant="h1" sx={{ mb: 2, fontWeight: '500', fontSize: 34 }}>
+            <Typography variant="h1" sx={{ mb: 2, fontWeight: 500, fontSize: 30, color: '#333' }}>
               {nomeBase}
             </Typography>
 
-            <Typography variant="h1" sx={{ mb: 0, fontWeight: '600', fontSize: 36 }}>
+            <Typography variant="h1" sx={{ mb: 0, fontWeight: 600, fontSize: 34 }}>
               {formataPreco(preco)}
             </Typography>
 
-            <Typography variant='h3' sx={{ mb: 2, fontWeight: '500', fontSize: 15 }}>
+            <Typography variant='h3' sx={{ mb: 2, fontWeight: 500, fontSize: 15, color: '#333' }}>
               Preço líquido para você
             </Typography>
 
-            <Typography variant='h2' sx={{ mb: 1, fontSize: 24 }}>
+            <Typography variant="h2" sx={{ mb: 1, fontSize: 22, fontWeight: 500, color: '#333' }}>
               {calcularEstoqueTotal(grupo)} unidades disponíveis!
             </Typography>
 

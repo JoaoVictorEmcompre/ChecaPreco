@@ -6,6 +6,7 @@ require('dotenv').config();
 const loginRoutes = require('./routes/login');
 const precoRoutes = require('./routes/preco');
 const estoqueRoutes = require('./routes/estoque');
+const eanRoutes = require('./routes/ean');
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use(morgan('dev'));
 app.use('/api/login', loginRoutes);
 app.use('/api/preco', precoRoutes);
 app.use('/api/estoque', estoqueRoutes);
+app.use('/api/ean', eanRoutes);
 
 // Rota de teste (opcional)
 app.get('/api/ping', (_, res) => res.json({ status: 'API online' }));
