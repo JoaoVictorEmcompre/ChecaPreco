@@ -7,6 +7,9 @@ import { useNavigate } from 'react-router-dom';
 import { getPrecoPorGrupo } from '../service/price.services';
 import { getEstoque } from '../service/stock.services';
 import { getSku } from '../service/ean';
+import { loginAutomatico } from '../service/login.services';
+import BuscaDesc from '../components/buscaDesc';
+import { getDesc } from '../service/cnpj.services';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -15,15 +18,26 @@ export default function HomePage() {
   const [submittedEan, setSubmittedEan] = useState('');
   const [estoque, setEstoque] = useState([]);
   const [preco, setPreco] = useState([]);
+  const [cnpj, setCnpj] = useState('');
+  const [desc, setDesc] = useState('');
+  const [submittedCnpj, setSubmittedCnpj] = useState('');
+
 
   useEffect(() => {
     const user = sessionStorage.getItem('username');
     if (!user) {
-      navigate('/Login');
+      // navigate('/Login'); ATIVAR NOVAMENTE QUANDO VOLTAR O LOGIN
+      // LOGIN AUTOMATICO
+      loginAutomatico().then(() => {
+        const usuario = sessionStorage.getItem('username');
+        if (usuario) {
+          setUsername(usuario);
+        }
+      });
     } else {
       setUsername(user);
     }
-  }, [navigate]);
+  }, []);
 
   const isEan = (codigo) => /^\d{13,}$/.test(codigo); // 13+ dígitos = EAN
 
@@ -63,6 +77,26 @@ export default function HomePage() {
     }
   };
 
+  const handleSearchCNPJ = async (valor) => {
+    if (!valor || valor.trim() === '') {
+      setCnpj('');
+      setSubmittedCnpj('');
+      setDesc('');
+      return;
+    }
+
+    setCnpj(valor);
+    setSubmittedCnpj(valor);
+
+    try {
+      const descricao = await getDesc(valor);
+      setDesc(descricao);
+    } catch (error) {
+      console.error('Erro ao buscar descrição do CNPJ:', error);
+      setDesc('Não encontrado');
+    }
+  };
+
 
   const handleLogout = () => {
     sessionStorage.removeItem('username');
@@ -70,11 +104,30 @@ export default function HomePage() {
     navigate('/Login');
   };
 
+  const validaDesc = (desc) => {
+    if (desc === '1') {
+      return desc = '10'
+    }
+  }
+
   return (
     <div>
       <Header username={username} onLogout={handleLogout} />
 
       <div style={{ padding: 24 }}>
+        <BuscaDesc
+          value={cnpj}
+          onChange={setCnpj}
+          onSubmit={handleSearchCNPJ}
+        />
+
+        {desc && (
+          <Typography variant="subtitle2" sx={{ mb: 2, textAlign: 'center' }}>
+            Desconto: <strong>{validaDesc(desc)}%</strong>
+          </Typography>
+        )}
+
+
         <CampoDeBusca
           value={ean}
           onChange={setEan}
@@ -86,7 +139,7 @@ export default function HomePage() {
             Resultado da busca por: <strong>{submittedEan}</strong>
           </Typography>
         )}
-        <TabelaEstoque data={estoque} preco={preco?.price} />
+        <TabelaEstoque data={estoque} preco={preco?.price} desconto={validaDesc(desc)} />
       </div>
     </div>
   );
