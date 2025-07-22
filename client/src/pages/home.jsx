@@ -93,7 +93,7 @@ export default function HomePage() {
       setDesc(descricao);
     } catch (error) {
       console.error('Erro ao buscar descrição do CNPJ:', error);
-      setDesc('Não encontrado');
+      setDesc('');
     }
   };
 
@@ -108,6 +108,7 @@ export default function HomePage() {
     if (desc === '1') {
       return desc = '10'
     }
+    return desc;
   }
 
   return (
@@ -121,12 +122,19 @@ export default function HomePage() {
           onSubmit={handleSearchCNPJ}
         />
 
-        {desc && (
-          <Typography variant="subtitle2" sx={{ mb: 2, textAlign: 'center' }}>
-            Desconto: <strong>{validaDesc(desc)}%</strong>
-          </Typography>
+        {cnpj !== '' && (
+          desc === ''
+            ? (
+              <Typography variant="subtitle2" sx={{ mb: 2, textAlign: 'center' }}>
+                <strong>Usuário sem desconto</strong>
+              </Typography>
+            )
+            : (
+              <Typography variant="subtitle2" sx={{ mb: 2, textAlign: 'center' }}>
+                Desconto: <strong>{validaDesc(desc)}%</strong>
+              </Typography>
+            )
         )}
-
 
         <CampoDeBusca
           value={ean}
