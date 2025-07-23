@@ -5,7 +5,7 @@ import './App.css'
 
 export default function App() {
   return (
-    <Router>
+    <Router >
       <Routes>
         <Route path='/Login' element={<Login />} />
         <Route path='/' element={<HomePage />} />

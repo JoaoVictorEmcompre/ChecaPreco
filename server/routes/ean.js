@@ -3,17 +3,28 @@ const axios = require('axios');
 const router = express.Router();
 
 router.get('/', async (req, res) => {
-  const { codigo } = req.query;
+  const { codigo, token } = req.query;
 
   if (!codigo) {
     return res.status(400).json({ error: 'Código EAN é obrigatório.' });
   }
 
-  try {
-    const url = `${process.env.API_EAN}/${codigo}`;
-    const response = await axios.get(url);
+  if (!token) {
+    return res.status(400).json({ error: 'Token de autenticação é obrigatório.' });
+  }
 
-    const cdPrd = response.data?.cdPrd;
+  try {
+    const url = `${process.env.API_EAN}/${codigo}/1`;
+
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const produto = response.data?.items?.[0];
+    const cdPrd = produto?.productCode;
 
     if (!cdPrd) {
       return res.status(404).json({ error: 'Produto não encontrado para o EAN informado.' });
