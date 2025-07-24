@@ -7,14 +7,14 @@ router.post('/', async (req, res) => {
 
   const params = new URLSearchParams({
     grant_type: 'password',
-    client_id: process.env.CLIENT_ID,
-    client_secret: process.env.CLIENT_SECRET,
+    client_id: "bandvestapiv2",
+    client_secret: "4776436009",
     username: usuario,
     password: password,
   });
 
   try {
-    const response = await axios.post(`${process.env.API_LOGIN}/authorization/v2/token`, params);
+    const response = await axios.post(`https://ws.facolchoes.com.br:9443/api/totvsmoda/authorization/v2/token`, params);
     res.json(response.data);
   } catch (err) {
     console.error('Erro na autenticação:', err.response?.data || err.message);

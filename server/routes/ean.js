@@ -22,7 +22,7 @@ router.get('/', async (req, res) => {
   }
 
   try {
-    const url = `${process.env.API_EAN}/${codigo}/1`;
+    const url = `https://bandvest.vcenter.com.br:9443/api/totvsmoda/product/v2/products/${codigo}/1`;
     console.log('🌐 URL de consulta:', url);
 
     const agent = new https.Agent({ rejectUnauthorized: false });

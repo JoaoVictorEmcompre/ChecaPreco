@@ -1,13 +1,9 @@
 import axios from 'axios';
 import { saveToken } from './token';
 
-const API_BASE = '/api';
-const API_RENDER = "https://checapreco.onrender.com";
-
-
 export const login = async (usuario, password) => {
   try {
-    const response = await axios.post(`${API_RENDER}${API_BASE}/login`, {
+    const response = await axios.post(`/api/login`, {
       usuario,
       password,
     });

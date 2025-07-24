@@ -1,12 +1,10 @@
 import axios from 'axios';
 import { getToken } from './token';
 
-const API_RENDER = "https://checapreco.onrender.com";
-
 export const getPrecoPorGrupo = async (groupCode) => {
   const token = getToken();
 
-  const response = await axios.post(`${API_RENDER}/api/preco`, {
+  const response = await axios.post(`/api/preco`, {
     groupCode,
     token,
   });

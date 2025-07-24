@@ -10,7 +10,7 @@ router.get('/', async (req, res) => {
     }
 
     try {
-        const url = `${process.env.API_CNPJ}/${codigo}`;
+        const url = `http://187.95.116.54:9989/pcp/cnpj/${codigo}`;
         const response = await axios.get(url);
 
         const tabDesc = response.data?.tabDesc;

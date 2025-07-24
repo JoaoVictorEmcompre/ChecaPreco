@@ -22,7 +22,7 @@ router.post('/', async (req, res) => {
   };
 
   try {
-    const response = await axios.post(process.env.API_STOCK, body, {
+    const response = await axios.post("https://ws.facolchoes.com.br:9443/api/totvsmoda/product/v2/balances/search", body, {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
