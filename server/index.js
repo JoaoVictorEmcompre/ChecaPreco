@@ -16,15 +16,47 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
-// Rotas da API
-app.use('/api/login', loginRoutes);
-app.use('/api/preco', precoRoutes);
-app.use('/api/estoque', estoqueRoutes);
-app.use('/api/ean', eanRoutes);
-app.use('/api/cnpj', cnpjRoutes);
+// Logs iniciais
+console.log('✅ Iniciando aplicação...');
+console.log('🔗 Registrando middlewares e rotas...');
 
-// Rota de teste (opcional)
-app.get('/api/ping', (_, res) => res.json({ status: 'API online' }));
+// Rotas da API com logs de carregamento
+app.use('/api/login', (req, res, next) => {
+  console.log(`📥 [${new Date().toISOString()}] Rota /api/login acessada`);
+  next();
+}, loginRoutes);
+
+app.use('/api/preco', (req, res, next) => {
+  console.log(`📥 [${new Date().toISOString()}] Rota /api/preco acessada`);
+  next();
+}, precoRoutes);
+
+app.use('/api/estoque', (req, res, next) => {
+  console.log(`📥 [${new Date().toISOString()}] Rota /api/estoque acessada`);
+  next();
+}, estoqueRoutes);
+
+app.use('/api/ean', (req, res, next) => {
+  console.log(`📥 [${new Date().toISOString()}] Rota /api/ean acessada`);
+  next();
+}, eanRoutes);
+
+app.use('/api/cnpj', (req, res, next) => {
+  console.log(`📥 [${new Date().toISOString()}] Rota /api/cnpj acessada`);
+  next();
+}, cnpjRoutes);
+
+// Rota de teste
+app.get('/api/ping', (_, res) => {
+  console.log(`✅ [${new Date().toISOString()}] Rota /api/ping acessada`);
+  res.json({ status: 'API online' });
+});
+
+// Captura de 404
+app.use((req, res) => {
+  console.warn(`⚠️ [404] Caminho não encontrado: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({ error: 'Rota não encontrada' });
+});
 
 // Inicia servidor
 const PORT = process.env.PORT || 5000;
