@@ -23,7 +23,7 @@ export const loginAutomatico = async () => {
     const data = await login(usuarioFixo, senhaFixa);
     if (data.access_token) {
       saveToken(data.access_token);
-      sessionStorage.setItem('username', "vendedora");
+      sessionStorage.setItem('username', "vendedoras");
       console.log('Login automático realizado com sucesso');
     } else {
       console.error('Token não retornado pelo login.');
