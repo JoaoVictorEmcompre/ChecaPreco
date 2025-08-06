@@ -13,7 +13,6 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
   const [openScanner, setOpenScanner] = useState(false);
   const [videoDevices, setVideoDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
-  const [scannerReady, setScannerReady] = useState(false);
   const videoRef = useRef(null);
   const codeReader = useRef(null);
   const inputRef = useRef(null);
@@ -115,17 +114,14 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
   useEffect(() => {
     if (!openScanner) return;
 
-    const fetchDevices = async () => {
+    const fetchDevicesAndStart = async () => {
       try {
         const devices = await BrowserMultiFormatReader.listVideoInputDevices();
         setVideoDevices(devices);
 
-        // Tenta carregar a última câmera usada
-        const saved = localStorage.getItem('ultimaCameraUsada');
-        const found = devices.find(d => d.deviceId === saved);
-
-        setSelectedDeviceId(found?.deviceId || devices[0]?.deviceId || '');
-        setScannerReady(true); // Sinaliza que pode iniciar o scanner depois
+        const defaultDevice = devices[0];
+        setSelectedDeviceId(defaultDevice.deviceId);
+        await startScanner(defaultDevice.deviceId);
       } catch (err) {
         console.error("Erro ao acessar câmeras:", err);
         alert("Erro ao acessar as câmeras.");
@@ -133,15 +129,14 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
       }
     };
 
-    fetchDevices();
+    fetchDevicesAndStart();
   }, [openScanner]);
 
   useEffect(() => {
-    if (selectedDeviceId && openScanner && scannerReady) {
-      localStorage.setItem('ultimaCameraUsada', selectedDeviceId);
+    if (selectedDeviceId && openScanner) {
       startScanner(selectedDeviceId);
     }
-  }, [selectedDeviceId, openScanner, scannerReady]);
+  }, [selectedDeviceId]);
 
   return (
     <>
@@ -177,13 +172,13 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
 
       <Dialog
         open={openScanner}
-        onClose={() => { stopScanner(); setOpenScanner(false); setScannerReady(false); }}
+        onClose={() => { stopScanner(); setOpenScanner(false); }}
         maxWidth="sm"
         fullWidth
       >
         <DialogContent sx={{ position: 'relative', p: 3 }}>
           <IconButton
-            onClick={() => { stopScanner(); setOpenScanner(false); setScannerReady(false); }}
+            onClick={() => { stopScanner(); setOpenScanner(false); }}
             sx={{
               position: 'absolute',
               top: 8,
