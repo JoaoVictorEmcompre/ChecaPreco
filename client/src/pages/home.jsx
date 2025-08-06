@@ -21,6 +21,7 @@ export default function HomePage() {
   const [cnpj, setCnpj] = useState('');
   const [desc, setDesc] = useState('');
   const [submittedCnpj, setSubmittedCnpj] = useState('');
+  const [msgErro, setMsgErro] = useState('');
 
 
   useEffect(() => {
@@ -55,6 +56,13 @@ export default function HomePage() {
 
     if (isEan(valor)) {
       const sku = await getSku(valor);
+
+      if (sku === null) {
+        setMsgErro('Produto não encontrado')
+        return;
+      }
+
+      setMsgErro('');
 
       const precoData = await getPrecoPorGrupo(sku);
       setPreco(precoData);
@@ -147,6 +155,13 @@ export default function HomePage() {
             Resultado da busca por: <strong>{submittedEan}</strong>
           </Typography>
         )}
+
+        {msgErro !== '' && (
+          <Typography variant="subtitle1" sx={{ mb: 2, textAlign: 'center' }}>
+            <strong>{msgErro}</strong>
+          </Typography>
+        )}
+
         <TabelaEstoque data={estoque} preco={preco?.price} desconto={validaDesc(desc)} />
       </div>
     </div>
