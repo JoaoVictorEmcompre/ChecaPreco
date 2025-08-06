@@ -57,12 +57,13 @@ export default function HomePage() {
     if (isEan(valor)) {
       const sku = await getSku(valor);
 
+      console.log(sku)
       if (sku === null) {
         setMsgErro('Produto não encontrado')
         return;
+      } else {
+        setMsgErro('');
       }
-
-      setMsgErro('');
 
       const precoData = await getPrecoPorGrupo(sku);
       setPreco(precoData);
