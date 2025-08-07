@@ -16,6 +16,7 @@ export default function Login() {
 
   const handleInputChange = (field) => (event) => {
     const value = event.target.value;
+    console.log('[Login] Alteração do campo:', field, '| Novo valor:', value);
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
     if (loginError) setLoginError('');
@@ -26,29 +27,37 @@ export default function Login() {
     if (!formData.usuario.trim()) newErrors.usuario = 'Usuário é obrigatório';
     if (!formData.password.trim()) newErrors.password = 'Senha é obrigatória';
     setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      console.warn('[Login] Validação de formulário falhou:', newErrors);
+    }
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('[Login] Tentativa de submit com:', formData);
+
     if (!validateForm()) return;
 
     setLoading(true);
     setLoginError('');
+    console.log('[Login] Enviando requisição para login.services...');
 
     try {
       const data = await login(formData.usuario, formData.password);
+      console.log('[Login] Resposta do serviço:', data);
 
       if (data.access_token) {
+        console.log('[Login] Login bem-sucedido! Salvando token e redirecionando...');
         saveToken(data.access_token);
         sessionStorage.setItem('username', formData.usuario)
         window.location.href = '/';
       } else {
+        console.error('[Login] Resposta inválida do servidor (sem access_token)', data);
         setLoginError('Resposta inválida do servidor.');
       }
-
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('[Login] Erro durante login:', error);
       if (error.response?.status === 400 || error.response?.status === 401) {
         setLoginError('Usuário ou senha incorretos.');
       } else {
@@ -56,6 +65,7 @@ export default function Login() {
       }
     } finally {
       setLoading(false);
+      console.log('[Login] Fim do submit. loading = false');
     }
   };
 

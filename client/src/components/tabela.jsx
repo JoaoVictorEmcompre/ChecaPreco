@@ -25,7 +25,6 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
   },
 }));
 
-
 const StyledTableRow = styled(TableRow)(() => ({
   '&:nth-of-type(odd)': {
     backgroundColor: '#fcfcfc',
@@ -34,7 +33,6 @@ const StyledTableRow = styled(TableRow)(() => ({
     backgroundColor: '#f5f5f5',
   },
 }));
-
 
 function agruparPorReferencia(items) {
   const grupos = {};
@@ -109,6 +107,9 @@ function TabelaMatriz({ grupo }) {
     const qtd = i.balances?.[0]?.stock ?? 0;
     estoqueMap[key] = (estoqueMap[key] || 0) + qtd;
   });
+
+  console.log('[TabelaEstoque] Renderizando TabelaMatriz | cores:', cores, '| tamanhos:', tamanhos, '| estoqueMap:', estoqueMap);
+
   return (
     <Box sx={{ position: 'relative' }}>
       <Typography variant="caption" sx={{ mb: 0.5, display: 'block', color: 'gray', fontSize: 14 }}>Arraste para o lado ↔</Typography>
@@ -145,6 +146,7 @@ function TabelaMatriz({ grupo }) {
 }
 
 function TabelaPorTamanho({ grupo }) {
+  console.log('[TabelaEstoque] Renderizando TabelaPorTamanho | grupo:', grupo);
   return (
     <TableContainer component={Paper} sx={{ mb: 4 }}>
       <Table>
@@ -177,6 +179,7 @@ function TabelaPorTamanho({ grupo }) {
 }
 
 function TabelaPorCor({ grupo }) {
+  console.log('[TabelaEstoque] Renderizando TabelaPorCor | grupo:', grupo);
   return (
     <TableContainer component={Paper} sx={{ mb: 4 }}>
       <Table>
@@ -225,6 +228,7 @@ function calcularEstoqueTotal(grupo) {
 }
 
 export default function TabelaEstoque({ data, preco, desconto = 0 }) {
+  console.log('[TabelaEstoque] Render | props:', { data, preco, desconto });
   const agrupado = agruparPorReferencia(data);
 
   const precoComDesconto = (preco, desconto) => {
@@ -240,6 +244,9 @@ export default function TabelaEstoque({ data, preco, desconto = 0 }) {
       {Object.entries(agrupado).map(([ref, grupo]) => {
         const tipo = identificarTipoGrupo(grupo);
         const nomeBase = formatarNomeProduto(grupo[0].productName, grupo, tipo);
+
+        console.log('[TabelaEstoque] Grupo ref:', ref, '| tipo:', tipo, '| nomeBase:', nomeBase, '| grupo:', grupo);
+
         return (
           <div key={ref}>
             <Typography variant="h1" sx={{ mb: 2, fontWeight: 500, fontSize: 30, color: '#333' }}>
@@ -259,7 +266,6 @@ export default function TabelaEstoque({ data, preco, desconto = 0 }) {
             <Typography variant='h3' sx={{ mb: 2, fontWeight: 500, fontSize: 15, color: '#333' }}>
               Preço líquido para você
             </Typography>
-
 
             <Typography variant="h2" sx={{ mb: 1, fontSize: 22, fontWeight: 500, color: '#333' }}>
               {calcularEstoqueTotal(grupo)} unidades disponíveis!

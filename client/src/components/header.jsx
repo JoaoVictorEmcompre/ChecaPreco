@@ -3,6 +3,9 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import Logo from '../assets/logo-bf-white.png';
 
 export default function Header({ username, onLogout }) {
+  // Loga toda vez que o Header renderiza (útil para debugging de re-renderizações ou props)
+  console.log('[Header] Render - username:', username);
+
   return (
     <Box
       sx={{
@@ -36,7 +39,13 @@ export default function Header({ username, onLogout }) {
 
       {/* Direita: Botão */}
       <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-        <IconButton onClick={onLogout} sx={{ color: 'white' }}>
+        <IconButton
+          onClick={() => {
+            console.log('[Header] Logout clicado');
+            onLogout();
+          }}
+          sx={{ color: 'white' }}
+        >
           <LogoutIcon />
         </IconButton>
       </Box>

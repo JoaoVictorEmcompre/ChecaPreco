@@ -9,6 +9,7 @@ export default function BuscaCNPJ({ value, onChange, onSubmit }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    console.log('[BuscaCNPJ] Submit com valor:', value);
     onSubmit(value);
   };
 
@@ -32,7 +33,13 @@ export default function BuscaCNPJ({ value, onChange, onSubmit }) {
           placeholder="Digite o CNPJ"
           inputProps={{ 'aria-label': 'CNPJ' }}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            console.log('[BuscaCNPJ] Input alterado:', e.target.value);
+            onChange(e.target.value);
+          }}
+          onFocus={() => {
+            console.log('[BuscaCNPJ] Campo CNPJ focado');
+          }}
         />
         <IconButton type="submit" sx={{ p: '10px' }} aria-label="search">
           <SearchIcon />
