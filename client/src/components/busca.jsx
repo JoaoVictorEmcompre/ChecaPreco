@@ -22,21 +22,17 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
   // Função para envio do formulário
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('[CampoDeBusca] Submit formulário com valor:', value);
     onSubmit(value);
   };
 
   // Cleanup completo do scanner e da câmera
   const stopScanner = async () => {
-    alreadyDetected.current = false;
     try {
       if (codeReader.current) {
         if (typeof codeReader.current.reset === 'function') {
           await codeReader.current.reset();
-          console.log('[CampoDeBusca] Scanner resetado');
         } else if (typeof codeReader.current.stopStreams === 'function') {
           codeReader.current.stopStreams();
-          console.log('[CampoDeBusca] Scanner stopStreams executado');
         }
         codeReader.current = null;
       }
@@ -44,50 +40,43 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
       if (video?.srcObject) {
         video.srcObject.getTracks().forEach((track) => track.stop());
         video.srcObject = null;
-        console.log('[CampoDeBusca] Tracks de vídeo paradas');
       }
     } catch (err) {
-      console.error('[CampoDeBusca] Erro ao parar scanner:', err);
+      // ignore
     }
   };
 
-  // Inicializa o scanner para o deviceId selecionado
+  // Inicializa o scanner para o deviceId selecionado (correção aqui!)
   const startScanner = async (deviceId) => {
     try {
-      console.log('[CampoDeBusca] Iniciando scanner com deviceId:', deviceId);
-      alreadyDetected.current = false;
       await stopScanner();
+      // Delay para garantir o "buffer limpo" e resetar a flag só depois
+      setTimeout(async () => {
+        alreadyDetected.current = false; // Só reseta aqui!
+        const hints = new Map();
+        hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13]);
+        hints.set(DecodeHintType.TRY_HARDER, true);
 
-      if (!deviceId) {
-        console.warn('[CampoDeBusca] Nenhum deviceId recebido para iniciar scanner');
-        return;
-      }
+        codeReader.current = new BrowserMultiFormatReader(hints);
 
-      const hints = new Map();
-      hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13]);
-      hints.set(DecodeHintType.TRY_HARDER, true);
-
-      codeReader.current = new BrowserMultiFormatReader(hints);
-
-      await codeReader.current.decodeFromVideoDevice(
-        deviceId,
-        videoRef.current,
-        (result) => {
-          if (result && !alreadyDetected.current) {
-            alreadyDetected.current = true;
-            const texto = result.getText();
-            console.log('[CampoDeBusca] Código detectado pelo scanner:', texto);
-            onChange(texto);
-            setTimeout(() => {
-              if (inputRef.current) inputRef.current.focus();
-              onSubmit(texto);
-            }, 0);
-            setOpenScanner(false);
+        await codeReader.current.decodeFromVideoDevice(
+          deviceId,
+          videoRef.current,
+          (result) => {
+            if (result && !alreadyDetected.current) {
+              alreadyDetected.current = true;
+              const texto = result.getText();
+              onChange(texto);
+              setTimeout(() => {
+                if (inputRef.current) inputRef.current.focus();
+                onSubmit(texto);
+              }, 0);
+              setOpenScanner(false);
+            }
           }
-        }
-      );
+        );
+      }, 300); // 300ms, pode ajustar se quiser
     } catch (err) {
-      console.error('[CampoDeBusca] Erro ao iniciar scanner:', err);
       alert("Erro ao iniciar o scanner.");
     }
   };
@@ -102,13 +91,11 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
 
     img.onload = async () => {
       try {
-        console.log('[CampoDeBusca] Imagem carregada para leitura do código');
         const hints = new Map();
         hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13]);
         const reader = new BrowserMultiFormatReader(hints);
         const result = await reader.decodeFromImageElement(img);
         const texto = result.getText();
-        console.log('[CampoDeBusca] Código detectado na imagem:', texto);
         onChange(texto);
         setTimeout(() => {
           if (inputRef.current) inputRef.current.focus();
@@ -116,25 +103,22 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
         }, 0);
         setOpenScanner(false);
       } catch (err) {
-        console.warn('[CampoDeBusca] Código não detectado na imagem.', err);
         alert("Não foi possível detectar um código de barras EAN-13 na imagem.");
       } finally {
-        URL.revokeObjectURL(imageUrl); // Libera o recurso
-        console.log('[CampoDeBusca] imageUrl liberado');
+        URL.revokeObjectURL(imageUrl);
       }
     };
   };
 
-  // Efetua cleanup sempre que o componente desmontar
+  // Cleanup sempre ao desmontar
   useEffect(() => {
     return () => {
-      console.log('[CampoDeBusca] Componente desmontado, realizando cleanup do scanner');
       stopScanner();
     };
     // eslint-disable-next-line
   }, []);
 
-  // Sempre que abrir o scanner, busca devices e define o default (mas NÃO starta scanner aqui)
+  // Busca devices ao abrir scanner
   useEffect(() => {
     if (!openScanner) return;
 
@@ -142,7 +126,6 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
       try {
         const devices = await BrowserMultiFormatReader.listVideoInputDevices();
         setVideoDevices(devices);
-        console.log('[CampoDeBusca] Dispositivos de vídeo encontrados:', devices);
         if (devices.length > 0) {
           setSelectedDeviceId(devices[0].deviceId);
         } else {
@@ -150,24 +133,21 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
           setOpenScanner(false);
         }
       } catch (err) {
-        console.error('[CampoDeBusca] Erro ao acessar câmeras:', err);
         alert("Erro ao acessar as câmeras.");
         setOpenScanner(false);
       }
     };
     fetchDevices();
-    // Cleanup no fechamento do scanner
+    // Cleanup ao fechar scanner
     return () => {
-      console.log('[CampoDeBusca] Fechando scanner, realizando cleanup');
       stopScanner();
     };
     // eslint-disable-next-line
   }, [openScanner]);
 
-  // Sempre que trocar o device, starta o scanner (se modal estiver aberto)
+  // Start scanner ao trocar device ou abrir modal
   useEffect(() => {
     if (selectedDeviceId && openScanner) {
-      console.log('[CampoDeBusca] Troca de camera, deviceId:', selectedDeviceId);
       startScanner(selectedDeviceId);
     }
     // eslint-disable-next-line
@@ -194,16 +174,13 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
             placeholder="Escaneie ou digite o código do item"
             inputProps={{ 'aria-label': 'campo de código de barras' }}
             value={value}
-            onChange={(e) => {
-              console.log('[CampoDeBusca] Input alterado:', e.target.value);
-              onChange(e.target.value);
-            }}
+            onChange={(e) => onChange(e.target.value)}
           />
           <IconButton
             sx={{ p: '10px' }}
             aria-label="Abrir câmera para leitura de código"
             onClick={() => {
-              console.log('[CampoDeBusca] Botão de abrir câmera clicado');
+              onChange(''); // Limpa o campo ao abrir scanner (opcional, pode tirar)
               setOpenScanner(true);
             }}
           >
@@ -222,7 +199,6 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
       <Dialog
         open={openScanner}
         onClose={() => {
-          console.log('[CampoDeBusca] Fechando modal do scanner');
           stopScanner();
           setOpenScanner(false);
         }}
@@ -232,7 +208,6 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
         <DialogContent sx={{ position: 'relative', p: 3 }}>
           <IconButton
             onClick={() => {
-              console.log('[CampoDeBusca] Botão fechar scanner clicado');
               stopScanner();
               setOpenScanner(false);
             }}
@@ -261,10 +236,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
               <Select
                 fullWidth
                 value={selectedDeviceId}
-                onChange={(e) => {
-                  console.log('[CampoDeBusca] Troca de camera selecionada:', e.target.value);
-                  setSelectedDeviceId(e.target.value);
-                }}
+                onChange={(e) => setSelectedDeviceId(e.target.value)}
                 MenuProps={{ disablePortal: true }}
               >
                 {videoDevices.map((device, idx) => (
