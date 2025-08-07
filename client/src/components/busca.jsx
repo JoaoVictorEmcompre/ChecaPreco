@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Paper, InputBase, IconButton, Box, Dialog, DialogContent, Typography, Button, MenuItem, Select } from '@mui/material';
+import {
+  Paper, InputBase, IconButton, Box, Dialog, DialogContent, Typography,
+  Button, MenuItem, Select
+} from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import CloseIcon from '@mui/icons-material/Close';
@@ -16,11 +19,13 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
   const inputRef = useRef(null);
   const alreadyDetected = useRef(false);
 
+  // Função para envio do formulário
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit(value);
   };
 
+  // Cleanup completo do scanner e da câmera
   const stopScanner = async () => {
     alreadyDetected.current = false;
     try {
@@ -32,7 +37,6 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
         }
         codeReader.current = null;
       }
-
       const video = videoRef.current;
       if (video?.srcObject) {
         video.srcObject.getTracks().forEach((track) => track.stop());
@@ -43,10 +47,13 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
     }
   };
 
+  // Inicializa o scanner para o deviceId selecionado
   const startScanner = async (deviceId) => {
     try {
       alreadyDetected.current = false;
       await stopScanner();
+
+      if (!deviceId) return;
 
       const hints = new Map();
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13]);
@@ -57,7 +64,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
       await codeReader.current.decodeFromVideoDevice(
         deviceId,
         videoRef.current,
-        async (result, err) => {
+        (result) => {
           if (result && !alreadyDetected.current) {
             alreadyDetected.current = true;
             const texto = result.getText();
@@ -76,65 +83,75 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
     }
   };
 
+  // Leitura por imagem
   const handleImageUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
+    const imageUrl = URL.createObjectURL(file);
+    const img = new window.Image();
+    img.src = imageUrl;
 
-    try {
-      const imageUrl = URL.createObjectURL(file);
-      const img = new Image();
-      img.src = imageUrl;
-
-      img.onload = async () => {
-        try {
-          const hints = new Map();
-          hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13]);
-
-          const reader = new BrowserMultiFormatReader(hints);
-          const result = await reader.decodeFromImageElement(img);
-          const texto = result.getText();
-          onChange(texto);
-          setTimeout(() => {
-            if (inputRef.current) inputRef.current.focus();
-            onSubmit(texto);
-          }, 0);
-          setOpenScanner(false);
-        } catch (err) {
-          console.warn("Código não detectado na imagem.");
-          alert("Não foi possível detectar um código de barras EAN-13 na imagem.");
-        }
-      };
-    } catch (err) {
-      console.error("Erro ao carregar imagem:", err);
-    }
+    img.onload = async () => {
+      try {
+        const hints = new Map();
+        hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13]);
+        const reader = new BrowserMultiFormatReader(hints);
+        const result = await reader.decodeFromImageElement(img);
+        const texto = result.getText();
+        onChange(texto);
+        setTimeout(() => {
+          if (inputRef.current) inputRef.current.focus();
+          onSubmit(texto);
+        }, 0);
+        setOpenScanner(false);
+      } catch (err) {
+        console.warn("Código não detectado na imagem.");
+        alert("Não foi possível detectar um código de barras EAN-13 na imagem.");
+      } finally {
+        URL.revokeObjectURL(imageUrl); // Libera o recurso
+      }
+    };
   };
 
+  // Efetua cleanup sempre que o componente desmontar
+  useEffect(() => {
+    return () => { stopScanner(); };
+    // eslint-disable-next-line
+  }, []);
+
+  // Sempre que abrir o scanner, busca devices e define o default (mas NÃO starta scanner aqui)
   useEffect(() => {
     if (!openScanner) return;
 
-    const fetchDevicesAndStart = async () => {
+    const fetchDevices = async () => {
       try {
         const devices = await BrowserMultiFormatReader.listVideoInputDevices();
         setVideoDevices(devices);
-
-        const defaultDevice = devices[0];
-        setSelectedDeviceId(defaultDevice.deviceId);
-        await startScanner(defaultDevice.deviceId);
+        if (devices.length > 0) {
+          setSelectedDeviceId(devices[0].deviceId);
+        } else {
+          alert('Nenhuma câmera encontrada.');
+          setOpenScanner(false);
+        }
       } catch (err) {
         console.error("Erro ao acessar câmeras:", err);
         alert("Erro ao acessar as câmeras.");
         setOpenScanner(false);
       }
     };
-
-    fetchDevicesAndStart();
+    fetchDevices();
+    // Cleanup no fechamento do scanner
+    return () => { stopScanner(); };
+    // eslint-disable-next-line
   }, [openScanner]);
 
+  // Sempre que trocar o device, starta o scanner (se modal estiver aberto)
   useEffect(() => {
     if (selectedDeviceId && openScanner) {
       startScanner(selectedDeviceId);
     }
-  }, [selectedDeviceId]);
+    // eslint-disable-next-line
+  }, [selectedDeviceId, openScanner]);
 
   return (
     <>
@@ -155,14 +172,22 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
             inputRef={inputRef}
             sx={{ ml: 1, flex: 1, fontSize: 14 }}
             placeholder="Escaneie ou digite o código do item"
-            inputProps={{ 'aria-label': 'código de barras' }}
+            inputProps={{ 'aria-label': 'campo de código de barras' }}
             value={value}
             onChange={(e) => onChange(e.target.value)}
           />
-          <IconButton sx={{ p: '10px' }} aria-label="camera" onClick={() => setOpenScanner(true)}>
+          <IconButton
+            sx={{ p: '10px' }}
+            aria-label="Abrir câmera para leitura de código"
+            onClick={() => setOpenScanner(true)}
+          >
             <CameraAltIcon />
           </IconButton>
-          <IconButton type="submit" sx={{ p: '10px' }} aria-label="search">
+          <IconButton
+            type="submit"
+            sx={{ p: '10px' }}
+            aria-label="Buscar item pelo código"
+          >
             <SearchIcon />
           </IconButton>
         </Paper>
@@ -185,7 +210,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
               '&:hover': { backgroundColor: '#e0e0e0' },
               zIndex: 10,
             }}
-            aria-label="Fechar"
+            aria-label="Fechar scanner"
           >
             <CloseIcon />
           </IconButton>
@@ -223,6 +248,11 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
               border: '2px solid #ddd',
               boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
             }}
+            tabIndex={-1}
+            autoPlay
+            muted
+            playsInline
+            aria-label="Visualização da câmera"
           />
 
           <Box
@@ -259,6 +289,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
                     color: '#b71c1c',
                   },
                 }}
+                aria-label="Carregar imagem do código"
               >
                 Carregar Imagem do Código
               </Button>
