@@ -59,7 +59,11 @@ export default function HomePage() {
 
       console.log(sku)
       if (sku === null) {
-        setMsgErro('Produto não encontrado')
+        setMsgErro('Produto não encontrado');
+        setEan('');
+        setSubmittedEan('');
+        setPreco(null);
+        setEstoque([]);
         return;
       } else {
         setMsgErro('');

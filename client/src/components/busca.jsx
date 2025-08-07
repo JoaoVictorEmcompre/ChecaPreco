@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import {
-  Paper, InputBase, IconButton, Box, Dialog, DialogContent, Typography, Button, MenuItem, Select
-} from '@mui/material';
+import { Paper, InputBase, IconButton, Box, Dialog, DialogContent, Typography, Button, MenuItem, Select } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import CloseIcon from '@mui/icons-material/Close';
