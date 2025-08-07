@@ -16,7 +16,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
   const [isInitializing, setIsInitializing] = useState(false);
   const [scannerReady, setScannerReady] = useState(false);
-  
+
   const videoRef = useRef(null);
   const codeReader = useRef(null);
   const inputRef = useRef(null);
@@ -36,7 +36,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
     console.log('[CampoDeBusca] Iniciando stopScanner');
     alreadyDetected.current = false;
     setScannerReady(false);
-    
+
     try {
       // Para o stream atual
       if (currentStream.current) {
@@ -84,8 +84,8 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
 
     console.log('[CampoDeBusca] Iniciando scanner com deviceId:', deviceId);
     setIsInitializing(true);
-    alreadyDetected.current = false;
-    
+    alreadyDetected.current = false; // Resetando a detecção
+
     try {
       // Para qualquer scanner anterior
       await stopScanner();
@@ -96,7 +96,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
       const hints = new Map();
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13]);
       hints.set(DecodeHintType.TRY_HARDER, true);
-      
+
       codeReader.current = new BrowserMultiFormatReader(hints);
 
       // Primeiro, obtém acesso à câmera
@@ -111,13 +111,13 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       currentStream.current = stream;
-      
+
       // Configura o vídeo
       const video = videoRef.current;
       if (video) {
         video.srcObject = stream;
         await video.play();
-        
+
         // Aguarda o vídeo estar realmente pronto
         await new Promise(resolve => {
           const checkReady = () => {
@@ -144,25 +144,25 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
             const texto = result.getText();
             console.log('[CampoDeBusca] Código detectado pelo scanner:', texto);
             onChange(texto);
-            
+
             setTimeout(() => {
               if (inputRef.current) inputRef.current.focus();
               onSubmit(texto);
               setOpenScanner(false);
             }, 100);
           }
-          
+
           // Só loga erros que não sejam "código não encontrado"
-          if (error && error.name !== 'NotFoundException' && 
-              !error.message?.includes('No MultiFormat Readers were able to detect the code')) {
+          if (error && error.name !== 'NotFoundException' &&
+            !error.message?.includes('No MultiFormat Readers were able to detect the code')) {
             console.warn('[CampoDeBusca] Erro na decodificação:', error.message);
           }
         }
       );
-      
+
     } catch (err) {
       console.error('[CampoDeBusca] Erro ao iniciar scanner:', err);
-      
+
       let errorMessage = "Erro ao iniciar o scanner.";
       if (err.name === 'NotAllowedError') {
         errorMessage = "Permissão negada para acessar a câmera.";
@@ -171,7 +171,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
       } else if (err.name === 'NotReadableError') {
         errorMessage = "Câmera está sendo usada por outro aplicativo.";
       }
-      
+
       alert(errorMessage);
       setScannerReady(false);
       setOpenScanner(false);
@@ -188,26 +188,26 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
     console.log('[CampoDeBusca] Processando imagem carregada');
     const imageUrl = URL.createObjectURL(file);
     const img = new window.Image();
-    
+
     img.onload = async () => {
       try {
         const hints = new Map();
         hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13]);
         hints.set(DecodeHintType.TRY_HARDER, true);
-        
+
         const reader = new BrowserMultiFormatReader(hints);
         const result = await reader.decodeFromImageElement(img);
         const texto = result.getText();
-        
+
         console.log('[CampoDeBusca] Código detectado na imagem:', texto);
         onChange(texto);
-        
+
         setTimeout(() => {
           if (inputRef.current) inputRef.current.focus();
           onSubmit(texto);
           setOpenScanner(false);
         }, 100);
-        
+
       } catch (err) {
         console.warn('[CampoDeBusca] Código não detectado na imagem:', err);
         alert("Não foi possível detectar um código de barras EAN-13 na imagem.");
@@ -216,15 +216,15 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
         console.log('[CampoDeBusca] Recurso de imagem liberado');
       }
     };
-    
+
     img.onerror = () => {
       console.error('[CampoDeBusca] Erro ao carregar imagem');
       URL.revokeObjectURL(imageUrl);
       alert("Erro ao carregar a imagem.");
     };
-    
+
     img.src = imageUrl;
-    
+
     // Limpa o input para permitir upload da mesma imagem novamente
     event.target.value = '';
   };
@@ -233,7 +233,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
   const fetchVideoDevices = async () => {
     try {
       console.log('[CampoDeBusca] Solicitando permissão para câmera...');
-      
+
       // Primeiro solicita permissão
       await navigator.mediaDevices.getUserMedia({ video: true })
         .then(stream => {
@@ -243,37 +243,37 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
 
       console.log('[CampoDeBusca] Permissão concedida, buscando dispositivos...');
       const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-      
+
       if (devices.length === 0) {
         console.warn('[CampoDeBusca] Nenhum dispositivo de vídeo encontrado');
         alert('Nenhuma câmera encontrada.');
         setOpenScanner(false);
         return;
       }
-      
+
       console.log('[CampoDeBusca] Dispositivos encontrados:', devices);
       setVideoDevices(devices);
-      
+
       // No mobile, prefere câmera traseira se disponível
-      const backCamera = devices.find(device => 
-        device.label.toLowerCase().includes('back') || 
+      const backCamera = devices.find(device =>
+        device.label.toLowerCase().includes('back') ||
         device.label.toLowerCase().includes('traseira') ||
         device.label.toLowerCase().includes('environment')
       );
-      
+
       const defaultDevice = backCamera || devices[0];
       setSelectedDeviceId(defaultDevice.deviceId);
-      
+
     } catch (err) {
       console.error('[CampoDeBusca] Erro ao buscar dispositivos:', err);
-      
+
       let errorMessage = "Erro ao acessar as câmeras.";
       if (err.name === 'NotAllowedError') {
         errorMessage = "Permissão negada para acessar a câmera. Verifique as configurações do navegador.";
       } else if (err.name === 'NotFoundError') {
         errorMessage = "Nenhuma câmera encontrada no dispositivo.";
       }
-      
+
       alert(errorMessage);
       setOpenScanner(false);
     }
