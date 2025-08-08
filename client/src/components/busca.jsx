@@ -7,7 +7,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import CloseIcon from '@mui/icons-material/Close';
 import UploadIcon from '@mui/icons-material/Upload';
-import { BrowserMultiFormatReader } from '@zxing/browser';
+import { BrowserMultiFormatReader, BrowserCodeReader } from '@zxing/browser';
 import { DecodeHintType, BarcodeFormat } from '@zxing/library';
 
 export default function CampoDeBusca({ value, onChange, onSubmit }) {
@@ -19,50 +19,63 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
 
   const videoRef = useRef(null);
   const codeReader = useRef(null);
+  const controlsRef = useRef(null);
   const inputRef = useRef(null);
   const alreadyDetected = useRef(false);
-  const currentStream = useRef(null);
 
-  // NOVO: controle de “sessão” para evitar leitura imediata
-  const acceptAfterTS = useRef(0);         // timestamp mínimo para aceitar leitura
-  const lastConfirmed = useRef('');        // último código confirmado (enviado ao submit)
+  // controle de sessão para evitar leitura imediata
+  const acceptAfterTS = useRef(0);   // timestamp mínimo para aceitar leitura
+  const lastConfirmed = useRef('');  // último código confirmado (enviado ao submit)
 
-  // Função para envio do formulário
+  // --- utils ---
+
+  const listVideoInputDevicesSafe = async () => {
+    // tenta na base (BrowserCodeReader) e cai no MultiFormat se existir ali
+    if (typeof BrowserCodeReader?.listVideoInputDevices === 'function') {
+      return BrowserCodeReader.listVideoInputDevices();
+    }
+    if (typeof BrowserMultiFormatReader?.listVideoInputDevices === 'function') {
+      return BrowserMultiFormatReader.listVideoInputDevices();
+    }
+    // fallback via enumerateDevices
+    const all = await navigator.mediaDevices.enumerateDevices();
+    return all.filter(d => d.kind === 'videoinput');
+  };
+
+  // --- submit ---
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('[CampoDeBusca] Submit formulário com valor:', value);
     onSubmit(value);
   };
 
+  // --- scanner lifecycle ---
+
   const stopScanner = async () => {
-    console.log('[CampoDeBusca] Iniciando stopScanner');
+    console.log('[CampoDeBusca] stopScanner');
     alreadyDetected.current = false;
     setScannerReady(false);
 
     try {
-      // parar decode contínuo ANTES de matar o stream
-      if (codeReader.current) {
-        try {
-          if (typeof codeReader.current.stopContinuousDecode === 'function') {
-            codeReader.current.stopContinuousDecode();
-          }
-          if (typeof codeReader.current.reset === 'function') {
-            await codeReader.current.reset();
-          }
-        } catch (err) {
-          console.warn('[CampoDeBusca] Erro ao resetar codeReader:', err);
-        }
+      if (controlsRef.current && typeof controlsRef.current.stop === 'function') {
+        controlsRef.current.stop(); // para decodificação contínua e fecha tracks
+        controlsRef.current = null;
       }
-
-      if (currentStream.current) {
-        currentStream.current.getTracks().forEach(track => track.stop());
-        currentStream.current = null;
+      if (codeReader.current?.reset) {
+        await codeReader.current.reset();
       }
 
       const video = videoRef.current;
       if (video) {
-        video.srcObject = null;
-        video.load();
+        // zxing normalmente já fecha o stream; garantimos a limpeza do elemento
+        if (video.srcObject) {
+          try {
+            video.srcObject.getTracks?.().forEach(t => t.stop());
+          } catch {}
+          video.srcObject = null;
+        }
+        video.removeAttribute('src'); // extra clean
+        video.load?.();
       }
 
       codeReader.current = null;
@@ -78,22 +91,25 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
       return;
     }
 
-    console.log('[CampoDeBusca] Iniciando scanner com deviceId:', deviceId);
+    console.log('[CampoDeBusca] startScanner deviceId:', deviceId);
     setIsInitializing(true);
     alreadyDetected.current = false;
 
     try {
       await stopScanner();
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 150));
 
       const hints = new Map();
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13]);
       hints.set(DecodeHintType.TRY_HARDER, true);
 
-      // instancia “limpa”
       codeReader.current = new BrowserMultiFormatReader(hints);
 
-      // cria o stream (nós controlamos o vídeo, não o ZXing)
+      const video = videoRef.current;
+      if (video) {
+        video.onloadedmetadata = () => setScannerReady(true);
+      }
+
       const constraints = {
         video: {
           deviceId: { exact: deviceId },
@@ -102,77 +118,59 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
           height: { ideal: 720 }
         }
       };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      currentStream.current = stream;
 
-      const video = videoRef.current;
-      if (video) {
-        video.srcObject = stream;
-        await video.play();
-
-        // espera vídeo realmente pronto
-        await new Promise(resolve => {
-          const checkReady = () => {
-            if (video.videoWidth > 0 && video.videoHeight > 0) resolve();
-            else setTimeout(checkReady, 100);
-          };
-          checkReady();
-        });
-      }
-
-      setScannerReady(true);
-      console.log('[CampoDeBusca] Vídeo pronto, iniciando decodeFromVideoElementContinuously');
-
-      // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-      // TROCA PRINCIPAL: usar o elemento de vídeo que NÓS controlamos
-      // e decodificar continuamente a partir dele.
-      // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
-      // estado local para “estabilidade de 2 frames”
+      // estabilidade de 2 frames seguidos
       let lastFrameText = '';
       let lastFrameCount = 0;
 
-      codeReader.current.decodeFromVideoElementContinuously(video, (result, error) => {
-        if (result) {
-          const texto = result.getText();
+      controlsRef.current = await codeReader.current.decodeFromConstraints(
+        constraints,
+        video,
+        (result, error) => {
+          if (result) {
+            const texto = result.getText();
 
-          // 1) grace period
-          if (Date.now() < acceptAfterTS.current) return;
+            // 1) grace period
+            if (Date.now() < acceptAfterTS.current) return;
 
-          // 2) estabilidade de 2 frames seguidos
-          if (texto === lastFrameText) {
-            lastFrameCount += 1;
-          } else {
-            lastFrameText = texto;
-            lastFrameCount = 1;
+            // 2) estabilidade de 2 frames
+            if (texto === lastFrameText) {
+              lastFrameCount += 1;
+            } else {
+              lastFrameText = texto;
+              lastFrameCount = 1;
+            }
+            if (lastFrameCount < 2) return;
+
+            // 3) ignorar duplicatas
+            if (alreadyDetected.current) return;
+            if (texto === value) return;
+            if (texto === lastConfirmed.current) return;
+
+            console.log('[CampoDeBusca] Código detectado:', texto);
+            alreadyDetected.current = true;
+
+            onChange(texto);
+
+            setTimeout(() => {
+              inputRef.current?.focus?.();
+              onSubmit(texto);
+              lastConfirmed.current = texto;
+              setOpenScanner(false);
+            }, 100);
           }
-          if (lastFrameCount < 2) return;
 
-          // 3) ignorar duplicatas
-          if (alreadyDetected.current) return;
-          if (texto === value) return;
-          if (texto === lastConfirmed.current) return;
-
-          console.log('[CampoDeBusca] Código detectado:', texto);
-          alreadyDetected.current = true;
-
-          onChange(texto);
-
-          setTimeout(() => {
-            if (inputRef.current) inputRef.current.focus();
-            onSubmit(texto);
-            lastConfirmed.current = texto;
-            setOpenScanner(false);
-          }, 100);
+          if (
+            error &&
+            error.name !== 'NotFoundException' &&
+            !error.message?.includes('No MultiFormat Readers were able to detect the code')
+          ) {
+            console.warn('[CampoDeBusca] Erro na decodificação:', error.message);
+          }
         }
+      );
 
-        if (error &&
-          error.name !== 'NotFoundException' &&
-          !error.message?.includes('No MultiFormat Readers were able to detect the code')) {
-          console.warn('[CampoDeBusca] Erro na decodificação:', error.message);
-        }
-      });
-
+      console.log('[CampoDeBusca] decodeFromConstraints iniciado');
     } catch (err) {
       console.error('[CampoDeBusca] Erro ao iniciar scanner:', err);
       let errorMessage = 'Erro ao iniciar o scanner.';
@@ -188,8 +186,8 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
     }
   };
 
+  // --- upload imagem ---
 
-  // Leitura por imagem (mantida; adiciona duplicata mesmo raciocínio)
   const handleImageUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -208,7 +206,6 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
         const result = await reader.decodeFromImageElement(img);
         const texto = result.getText();
 
-        // Ignora duplicatas também aqui
         if (texto === value || texto === lastConfirmed.current) {
           console.log('[CampoDeBusca] Imagem com código duplicado, ignorando.');
           return;
@@ -218,15 +215,14 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
         onChange(texto);
 
         setTimeout(() => {
-          if (inputRef.current) inputRef.current.focus();
+          inputRef.current?.focus?.();
           onSubmit(texto);
           lastConfirmed.current = texto;
           setOpenScanner(false);
         }, 100);
-
       } catch (err) {
         console.warn('[CampoDeBusca] Código não detectado na imagem:', err);
-        alert("Não foi possível detectar um código de barras EAN-13 na imagem.");
+        alert('Não foi possível detectar um código de barras EAN-13 na imagem.');
       } finally {
         URL.revokeObjectURL(imageUrl);
         console.log('[CampoDeBusca] Recurso de imagem liberado');
@@ -236,51 +232,53 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
     img.onerror = () => {
       console.error('[CampoDeBusca] Erro ao carregar imagem');
       URL.revokeObjectURL(imageUrl);
-      alert("Erro ao carregar a imagem.");
+      alert('Erro ao carregar a imagem.');
     };
 
     img.src = imageUrl;
     event.target.value = '';
   };
 
+  // --- devices ---
+
   const fetchVideoDevices = async () => {
     try {
       console.log('[CampoDeBusca] Solicitando permissão para câmera...');
-      await navigator.mediaDevices.getUserMedia({ video: true })
-        .then(stream => { stream.getTracks().forEach(track => track.stop()); });
+      const tmp = await navigator.mediaDevices.getUserMedia({ video: true });
+      tmp.getTracks().forEach(t => t.stop());
 
       console.log('[CampoDeBusca] Permissão concedida, buscando dispositivos...');
-      const devices = await BrowserMultiFormatReader.listVideoInputDevices();
+      const devices = await listVideoInputDevicesSafe();
 
-      if (devices.length === 0) {
+      if (!devices || devices.length === 0) {
         console.warn('[CampoDeBusca] Nenhum dispositivo de vídeo encontrado');
         alert('Nenhuma câmera encontrada.');
         setOpenScanner(false);
         return;
       }
 
-      console.log('[CampoDeBusca] Dispositivos encontrados:', devices);
       setVideoDevices(devices);
 
       const backCamera = devices.find(device =>
-        device.label.toLowerCase().includes('back') ||
-        device.label.toLowerCase().includes('traseira') ||
-        device.label.toLowerCase().includes('environment')
+        (device.label || '').toLowerCase().includes('back') ||
+        (device.label || '').toLowerCase().includes('traseira') ||
+        (device.label || '').toLowerCase().includes('environment')
       );
 
       const defaultDevice = backCamera || devices[0];
       setSelectedDeviceId(defaultDevice.deviceId);
-
     } catch (err) {
       console.error('[CampoDeBusca] Erro ao buscar dispositivos:', err);
-      let errorMessage = "Erro ao acessar as câmeras.";
-      if (err.name === 'NotAllowedError') errorMessage = "Permissão negada para acessar a câmera. Verifique as configurações do navegador.";
-      else if (err.name === 'NotFoundError') errorMessage = "Nenhuma câmera encontrada no dispositivo.";
+      let errorMessage = 'Erro ao acessar as câmeras.';
+      if (err.name === 'NotAllowedError') errorMessage = 'Permissão negada para acessar a câmera. Verifique as configurações do navegador.';
+      else if (err.name === 'NotFoundError') errorMessage = 'Nenhuma câmera encontrada no dispositivo.';
 
       alert(errorMessage);
       setOpenScanner(false);
     }
   };
+
+  // --- effects ---
 
   useEffect(() => {
     return () => {
@@ -293,9 +291,9 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
     if (openScanner) {
       console.log('[CampoDeBusca] Abrindo scanner');
       alreadyDetected.current = false;
-      lastConfirmed.current = '';             // <<< limpa último confirmado
-      onChange('');                           // limpa input do Home
-      acceptAfterTS.current = Date.now() + 500;  // 500ms
+      lastConfirmed.current = '';
+      onChange('');
+      acceptAfterTS.current = Date.now() + 500; // 500ms de grace
       fetchVideoDevices();
     } else {
       console.log('[CampoDeBusca] Fechando scanner');
@@ -312,17 +310,12 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
       console.log('[CampoDeBusca] Iniciando scanner para device:', selectedDeviceId);
       startScanner(selectedDeviceId);
     }
-  }, [selectedDeviceId, openScanner, videoDevices]);
+  }, [selectedDeviceId, openScanner, videoDevices, isInitializing]);
 
-  const handleCloseScanner = () => {
-    console.log('[CampoDeBusca] Fechando scanner via botão');
-    setOpenScanner(false);
-  };
+  // --- UI ---
 
-  const handleOpenScanner = () => {
-    console.log('[CampoDeBusca] Abrindo scanner via botão');
-    setOpenScanner(true);
-  };
+  const handleCloseScanner = () => setOpenScanner(false);
+  const handleOpenScanner = () => setOpenScanner(true);
 
   return (
     <>
@@ -345,10 +338,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
             placeholder="Escaneie ou digite o código do item"
             inputProps={{ 'aria-label': 'campo de código de barras' }}
             value={value}
-            onChange={(e) => {
-              console.log('[CampoDeBusca] Input alterado:', e.target.value);
-              onChange(e.target.value);
-            }}
+            onChange={(e) => onChange(e.target.value)}
           />
           <IconButton
             sx={{ p: '10px' }}
@@ -405,10 +395,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
               <Select
                 fullWidth
                 value={selectedDeviceId}
-                onChange={(e) => {
-                  console.log('[CampoDeBusca] Câmera selecionada:', e.target.value);
-                  setSelectedDeviceId(e.target.value);
-                }}
+                onChange={(e) => setSelectedDeviceId(e.target.value)}
                 disabled={isInitializing}
                 MenuProps={{ disablePortal: true }}
               >
@@ -421,7 +408,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
             </Box>
           )}
 
-          {/* Loading indicator */}
+          {/* Loading */}
           {isInitializing && (
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
               <CircularProgress size={24} />
@@ -456,14 +443,13 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
               Aguardando inicialização da câmera...
             </Typography>
           )}
-
           {scannerReady && (
             <Typography variant="body2" sx={{ mt: 1, textAlign: 'center', color: 'success.main' }}>
               Câmera pronta! Posicione o código de barras na tela.
             </Typography>
           )}
 
-          {/* Botão de upload */}
+          {/* Upload */}
           <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
             <label htmlFor="upload-image" style={{ width: '100%' }}>
               <input
