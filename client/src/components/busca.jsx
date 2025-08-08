@@ -22,6 +22,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
   const controlsRef = useRef(null);
   const inputRef = useRef(null);
   const alreadyDetected = useRef(false);
+  const isStartingRef = useRef(false); // <<< guard anti-reentrância
 
   // controle de sessão para evitar leitura imediata
   const acceptAfterTS = useRef(0);   // timestamp mínimo para aceitar leitura
@@ -30,14 +31,12 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
   // --- utils ---
 
   const listVideoInputDevicesSafe = async () => {
-    // tenta na base (BrowserCodeReader) e cai no MultiFormat se existir ali
     if (typeof BrowserCodeReader?.listVideoInputDevices === 'function') {
       return BrowserCodeReader.listVideoInputDevices();
     }
     if (typeof BrowserMultiFormatReader?.listVideoInputDevices === 'function') {
       return BrowserMultiFormatReader.listVideoInputDevices();
     }
-    // fallback via enumerateDevices
     const all = await navigator.mediaDevices.enumerateDevices();
     return all.filter(d => d.kind === 'videoinput');
   };
@@ -71,10 +70,10 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
         if (video.srcObject) {
           try {
             video.srcObject.getTracks?.().forEach(t => t.stop());
-          } catch {}
+          } catch { }
           video.srcObject = null;
         }
-        video.removeAttribute('src'); // extra clean
+        video.removeAttribute?.('src');
         video.load?.();
       }
 
@@ -91,13 +90,23 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
       return;
     }
 
+    // proteção contra chamadas duplas enquanto ainda está iniciando
+    if (isStartingRef.current) {
+      console.log('[CampoDeBusca] startScanner ignorado: já iniciando');
+      return;
+    }
+    isStartingRef.current = true;
+
     console.log('[CampoDeBusca] startScanner deviceId:', deviceId);
     setIsInitializing(true);
     alreadyDetected.current = false;
 
     try {
-      await stopScanner();
-      await new Promise(r => setTimeout(r, 150));
+      // só para se já houver sessão ativa
+      if (controlsRef.current) {
+        await stopScanner();
+      }
+      await new Promise(r => setTimeout(r, 120));
 
       const hints = new Map();
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13]);
@@ -107,7 +116,10 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
 
       const video = videoRef.current;
       if (video) {
-        video.onloadedmetadata = () => setScannerReady(true);
+        // alguns navegadores disparam 'loadeddata' de maneira mais confiável que 'loadedmetadata'
+        const markReady = () => setScannerReady(true);
+        video.onloadedmetadata = markReady;
+        video.onloadeddata = markReady;
       }
 
       const constraints = {
@@ -183,6 +195,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
       setOpenScanner(false);
     } finally {
       setIsInitializing(false);
+      isStartingRef.current = false;
     }
   };
 
@@ -305,12 +318,13 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
     }
   }, [openScanner]);
 
+  // >>> remove 'isInitializing' das deps e não reinicie se já houver sessão ativa
   useEffect(() => {
-    if (selectedDeviceId && openScanner && videoDevices.length > 0 && !isInitializing) {
+    if (selectedDeviceId && openScanner && videoDevices.length > 0 && !controlsRef.current) {
       console.log('[CampoDeBusca] Iniciando scanner para device:', selectedDeviceId);
       startScanner(selectedDeviceId);
     }
-  }, [selectedDeviceId, openScanner, videoDevices, isInitializing]);
+  }, [selectedDeviceId, openScanner, videoDevices]);
 
   // --- UI ---
 
