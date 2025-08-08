@@ -34,18 +34,28 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
     onSubmit(value);
   };
 
-  // Cleanup completo do scanner e da câmera
   const stopScanner = async () => {
     console.log('[CampoDeBusca] Iniciando stopScanner');
     alreadyDetected.current = false;
     setScannerReady(false);
 
     try {
+      // parar decode contínuo ANTES de matar o stream
+      if (codeReader.current) {
+        try {
+          if (typeof codeReader.current.stopContinuousDecode === 'function') {
+            codeReader.current.stopContinuousDecode();
+          }
+          if (typeof codeReader.current.reset === 'function') {
+            await codeReader.current.reset();
+          }
+        } catch (err) {
+          console.warn('[CampoDeBusca] Erro ao resetar codeReader:', err);
+        }
+      }
+
       if (currentStream.current) {
-        currentStream.current.getTracks().forEach((track) => {
-          track.stop();
-          console.log('[CampoDeBusca] Track parada:', track.label);
-        });
+        currentStream.current.getTracks().forEach(track => track.stop());
         currentStream.current = null;
       }
 
@@ -55,27 +65,13 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
         video.load();
       }
 
-      if (codeReader.current) {
-        try {
-          if (typeof codeReader.current.reset === 'function') {
-            await codeReader.current.reset();
-          }
-          if (typeof codeReader.current.stopContinuousDecode === 'function') {
-            codeReader.current.stopContinuousDecode();
-          }
-        } catch (err) {
-          console.warn('[CampoDeBusca] Erro ao resetar codeReader:', err);
-        }
-        codeReader.current = null;
-      }
-
+      codeReader.current = null;
       console.log('[CampoDeBusca] Scanner completamente parado');
     } catch (err) {
       console.error('[CampoDeBusca] Erro ao parar scanner:', err);
     }
   };
 
-  // Inicializa o scanner para o deviceId selecionado
   const startScanner = async (deviceId) => {
     if (!deviceId || !openScanner) {
       console.warn('[CampoDeBusca] Device ID inválido ou scanner fechado');
@@ -88,14 +84,16 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
 
     try {
       await stopScanner();
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(r => setTimeout(r, 200));
 
       const hints = new Map();
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13]);
       hints.set(DecodeHintType.TRY_HARDER, true);
 
+      // instancia “limpa”
       codeReader.current = new BrowserMultiFormatReader(hints);
 
+      // cria o stream (nós controlamos o vídeo, não o ZXing)
       const constraints = {
         video: {
           deviceId: { exact: deviceId },
@@ -104,7 +102,6 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
           height: { ideal: 720 }
         }
       };
-
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       currentStream.current = stream;
 
@@ -113,6 +110,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
         video.srcObject = stream;
         await video.play();
 
+        // espera vídeo realmente pronto
         await new Promise(resolve => {
           const checkReady = () => {
             if (video.videoWidth > 0 && video.videoHeight > 0) resolve();
@@ -123,60 +121,64 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
       }
 
       setScannerReady(true);
-      console.log('[CampoDeBusca] Vídeo inicializado, iniciando decodificação');
+      console.log('[CampoDeBusca] Vídeo pronto, iniciando decodeFromVideoElementContinuously');
 
-      codeReader.current.decodeFromVideoDevice(
-        deviceId,
-        video,
-        (result, error) => {
-          if (result) {
-            const texto = result.getText();
+      // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+      // TROCA PRINCIPAL: usar o elemento de vídeo que NÓS controlamos
+      // e decodificar continuamente a partir dele.
+      // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-            // 1) GRACE PERIOD: só aceita leitura após X ms da abertura
-            if (Date.now() < acceptAfterTS.current) {
-              // Evita pegar “o que já estava no quadro”
-              return;
-            }
+      // estado local para “estabilidade de 2 frames”
+      let lastFrameText = '';
+      let lastFrameCount = 0;
 
-            // 2) IGNORAR DUPLICATAS:
-            //    - já detectei nesta sessão?
-            if (alreadyDetected.current) return;
-            //    - igual ao value atual (controlado pelo Home)?
-            if (texto === value) return;
-            //    - igual ao último confirmado (último onSubmit)?
-            if (texto === lastConfirmed.current) return;
+      codeReader.current.decodeFromVideoElementContinuously(video, (result, error) => {
+        if (result) {
+          const texto = result.getText();
 
-            console.log('[CampoDeBusca] Código detectado pelo scanner:', texto);
-            alreadyDetected.current = true;
+          // 1) grace period
+          if (Date.now() < acceptAfterTS.current) return;
 
-            // Atualiza input visível
-            onChange(texto);
-
-            setTimeout(() => {
-              if (inputRef.current) inputRef.current.focus();
-
-              // Confirma a leitura (dispara a busca no Home)
-              onSubmit(texto);
-              lastConfirmed.current = texto;
-
-              // Fecha o scanner somente após confirmar
-              setOpenScanner(false);
-            }, 100);
+          // 2) estabilidade de 2 frames seguidos
+          if (texto === lastFrameText) {
+            lastFrameCount += 1;
+          } else {
+            lastFrameText = texto;
+            lastFrameCount = 1;
           }
+          if (lastFrameCount < 2) return;
 
-          if (error && error.name !== 'NotFoundException' &&
-            !error.message?.includes('No MultiFormat Readers were able to detect the code')) {
-            console.warn('[CampoDeBusca] Erro na decodificação:', error.message);
-          }
+          // 3) ignorar duplicatas
+          if (alreadyDetected.current) return;
+          if (texto === value) return;
+          if (texto === lastConfirmed.current) return;
+
+          console.log('[CampoDeBusca] Código detectado:', texto);
+          alreadyDetected.current = true;
+
+          onChange(texto);
+
+          setTimeout(() => {
+            if (inputRef.current) inputRef.current.focus();
+            onSubmit(texto);
+            lastConfirmed.current = texto;
+            setOpenScanner(false);
+          }, 100);
         }
-      );
+
+        if (error &&
+          error.name !== 'NotFoundException' &&
+          !error.message?.includes('No MultiFormat Readers were able to detect the code')) {
+          console.warn('[CampoDeBusca] Erro na decodificação:', error.message);
+        }
+      });
 
     } catch (err) {
       console.error('[CampoDeBusca] Erro ao iniciar scanner:', err);
-      let errorMessage = "Erro ao iniciar o scanner.";
-      if (err.name === 'NotAllowedError') errorMessage = "Permissão negada para acessar a câmera.";
-      else if (err.name === 'NotFoundError') errorMessage = "Câmera não encontrada.";
-      else if (err.name === 'NotReadableError') errorMessage = "Câmera está sendo usada por outro aplicativo.";
+      let errorMessage = 'Erro ao iniciar o scanner.';
+      if (err.name === 'NotAllowedError') errorMessage = 'Permissão negada para acessar a câmera.';
+      else if (err.name === 'NotFoundError') errorMessage = 'Câmera não encontrada.';
+      else if (err.name === 'NotReadableError') errorMessage = 'Câmera está sendo usada por outro aplicativo.';
 
       alert(errorMessage);
       setScannerReady(false);
@@ -185,6 +187,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
       setIsInitializing(false);
     }
   };
+
 
   // Leitura por imagem (mantida; adiciona duplicata mesmo raciocínio)
   const handleImageUpload = async (event) => {
@@ -289,11 +292,10 @@ export default function CampoDeBusca({ value, onChange, onSubmit }) {
   useEffect(() => {
     if (openScanner) {
       console.log('[CampoDeBusca] Abrindo scanner');
-
-      // RESET DE SESSÃO: limpa input, zera bandeiras e ativa grace period
       alreadyDetected.current = false;
-      onChange('');                              // limpa o campo no Home
-      acceptAfterTS.current = Date.now() + 500;  // 500ms de grace (ajuste entre 300–700ms)
+      lastConfirmed.current = '';             // <<< limpa último confirmado
+      onChange('');                           // limpa input do Home
+      acceptAfterTS.current = Date.now() + 500;  // 500ms
       fetchVideoDevices();
     } else {
       console.log('[CampoDeBusca] Fechando scanner');
