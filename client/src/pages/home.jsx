@@ -249,7 +249,7 @@ export default function HomePage() {
                 color="primary"
               />
             }
-            label={isOn ? "Ligado" : "Desligado"}
+            label={isOn ? "Grupo" : "Reduzido"}
           />
         </div>
 
