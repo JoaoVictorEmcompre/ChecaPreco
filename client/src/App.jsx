@@ -5,10 +5,10 @@ import './App.css'
 
 export default function App() {
   return (
-    <Router >
+    <Router basename={import.meta.env.BASE_URL}>
       <Routes>
-        <Route path='/Login' element={<Login />} />
-        <Route path='/' element={<HomePage />} />
+        <Route path="/Login" element={<Login />} />
+        <Route path="/" element={<HomePage />} />
       </Routes>
     </Router>
   )
