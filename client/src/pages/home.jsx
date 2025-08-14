@@ -140,6 +140,8 @@ export default function HomePage() {
 
         if (!productCode) {
           setMsgErro("Estoque não encontrado");
+          setEan('');
+          setGp('');
           setPreco(null);
           return;
         }
@@ -149,6 +151,8 @@ export default function HomePage() {
       } catch (error) {
         console.error("[handleSearch][GRUPO] Erro:", error);
         setMsgErro("Erro ao buscar item pelo grupo.");
+        setEan('');
+        setGp('');
         setPreco(null);
         setEstoque([]);
       }
