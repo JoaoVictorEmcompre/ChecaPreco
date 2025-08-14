@@ -50,9 +50,13 @@ export default function HomePage() {
 
   const isEan = (codigo) => /^\d{13,}$/.test(codigo); // 13+ dígitos = EAN
 
-  const handleSearch = async () => {
+  const handleSearch = async (incomingCode) => {
     // Sempre usa o campo correspondente ao modo atual
-    const codigo = isOn ? gp.trim() : ean.trim();
+    const raw = typeof incomingCode === "string" && incomingCode.length > 0
+      ? incomingCode
+      : (isOn ? gp : ean);
+    const codigo = (raw || "").trim();
+    
     console.log("[handleSearch] Modo:", isOn ? "GRUPO" : "SKU/EAN", " | Código:", codigo);
 
     if (!codigo) {
