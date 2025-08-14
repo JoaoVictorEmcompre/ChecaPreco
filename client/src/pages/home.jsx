@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Typography, Switch, FormControlLabel } from "@mui/material";
+import { Typography } from "@mui/material";
 import CampoDeBusca from "../components/busca";
 import CampoDeBuscaGrupo from "../components/buscaGrupo";
 import TabelaEstoque from "../components/tabela";
@@ -16,6 +16,7 @@ export default function HomePage() {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [ean, setEan] = useState("");
+  const [gp, setGp] = useState("");
   const [submittedEan, setSubmittedEan] = useState("");
   const [estoque, setEstoque] = useState([]);
   const [preco, setPreco] = useState([]);
@@ -49,109 +50,98 @@ export default function HomePage() {
 
   const isEan = (codigo) => /^\d{13,}$/.test(codigo); // 13+ dígitos = EAN
 
-  const handleSearch = async (valor) => {
-    console.log("[handleSearch] Valor recebido:", valor);
+  const handleSearch = async () => {
+    // Sempre usa o campo correspondente ao modo atual
+    const codigo = isOn ? gp.trim() : ean.trim();
+    console.log("[handleSearch] Modo:", isOn ? "GRUPO" : "SKU/EAN", " | Código:", codigo);
 
-    if (!valor || valor.trim() === "") {
-      setEan("");
+    if (!codigo) {
+      // limpa tudo
+      if (isOn) setGp("");
+      else setEan("");
       setSubmittedEan("");
       setPreco(null);
       setEstoque([]);
-      console.log("[handleSearch] Valor vazio, limpando states");
+      setMsgErro("");
       return;
     }
 
-    setEan(valor);
-    setSubmittedEan(valor);
-    console.log("[handleSearch] State EAN setado:", valor);
+    // registra o termo pesquisado pro banner
+    setSubmittedEan(codigo);
+    setMsgErro("");
 
-    if (isEan(valor)) {
-      // Fluxo padrão para EAN
-      console.log("[handleSearch] Valor é um EAN válido:", valor);
-      const sku = await getSku(valor);
-      console.log("[handleSearch] getSku retorno:", sku);
-
-      if (sku === null) {
-        setMsgErro("Produto não encontrado");
-        setPreco(null);
-        setEstoque([]);
-        console.warn("[handleSearch] Produto não encontrado para EAN:", valor);
-        return;
-      } else {
-        setMsgErro("");
-      }
-
-      const precoData = await getPrecoPorGrupo(sku);
-      console.log("[handleSearch] getPrecoPorGrupo retorno:", precoData);
-
-      setPreco(precoData);
-
-      if (!precoData?.referenceCode) {
-        console.warn("[handleSearch] precoData sem referenceCode:", precoData);
-        setEstoque([]);
-        return;
-      }
-
-      const estoqueData = await getEstoque(precoData.referenceCode);
-      console.log("[handleSearch] getEstoque retorno:", estoqueData);
-
-      setEstoque(estoqueData);
-      return;
-    }
-
-    // Aqui entra a lógica do botão para SKU/descrição
-    if (!isOn) {
-      // Fluxo padrão: busca preço, depois estoque
+    // 1) Se for EAN: resolve para SKU e segue pelo fluxo padrão EAN
+    if (isEan(codigo)) {
       try {
-        console.log("[handleSearch] Modo padrão (isOn = false) para SKU/descrição:", valor);
-        const precoData = await getPrecoPorGrupo(valor);
-        console.log("[handleSearch] getPrecoPorGrupo retorno:", precoData);
+        const sku = await getSku(codigo);
+        if (sku === null) {
+          setMsgErro("Produto não encontrado");
+          setPreco(null);
+          setEstoque([]);
+          return;
+        }
 
+        const precoData = await getPrecoPorGrupo(sku);
         setPreco(precoData);
 
         if (!precoData?.referenceCode) {
-          console.warn("[handleSearch] precoData sem referenceCode:", precoData);
           setEstoque([]);
           return;
         }
 
         const estoqueData = await getEstoque(precoData.referenceCode);
-        console.log("[handleSearch] getEstoque retorno:", estoqueData);
+        setEstoque(estoqueData);
+      } catch (err) {
+        console.error("[handleSearch][EAN] Erro:", err);
+        setMsgErro("Erro ao buscar produto por EAN.");
+        setPreco(null);
+        setEstoque([]);
+      }
+      return;
+    }
 
+    // 2) Não é EAN: decide fluxo pelo isOn
+    if (!isOn) {
+      // Fluxo padrão: preço -> estoque (usa `codigo` como SKU/código)
+      try {
+        const precoData = await getPrecoPorGrupo(codigo);
+        setPreco(precoData);
+
+        if (!precoData?.referenceCode) {
+          setEstoque([]);
+          return;
+        }
+
+        const estoqueData = await getEstoque(precoData.referenceCode);
         setEstoque(estoqueData);
       } catch (error) {
-        console.error("[handleSearch] Erro ao buscar estoque:", error);
+        console.error("[handleSearch][PADRÃO] Erro:", error);
+        setMsgErro("Erro ao buscar produto.");
         setPreco(null);
         setEstoque([]);
       }
     } else {
-      // Fluxo alternativo: busca estoque, depois preço usando productCode
+      // Fluxo grupo: estoque -> preço (usa `codigo` como grupo/sku conforme seu backend)
       try {
-        console.log("[handleSearch] Modo alternativo (isOn = true) para SKU/descrição:", valor);
-        const estoqueData = await getEstoque(valor);
-        console.log("[handleSearch] getEstoque retorno:", estoqueData);
-
+        const estoqueData = await getEstoque(codigo);
         setEstoque(estoqueData);
 
-        const productCode = Array.isArray(estoqueData) && estoqueData.length > 0
-          ? estoqueData[0].productCode
-          : null;
+        const productCode =
+          Array.isArray(estoqueData) && estoqueData.length > 0
+            ? estoqueData[0].productCode
+            : null;
 
         if (!productCode) {
           setMsgErro("Estoque não encontrado");
           setPreco(null);
-          console.warn("[handleSearch] Estoque não encontrado para SKU/descrição:", valor);
           return;
-        } else {
-          setMsgErro("");
         }
 
         const precoData = await getPrecoPorGrupo(productCode);
-        console.log("[handleSearch] getPrecoPorGrupo retorno:", precoData);
-
         setPreco(precoData);
       } catch (error) {
-        console.error("[handleSearch] Erro ao buscar preço:", error);
+        console.error("[handleSearch][GRUPO] Erro:", error);
+        setMsgErro("Erro ao buscar item pelo grupo.");
         setPreco(null);
         setEstoque([]);
       }
@@ -206,11 +196,7 @@ export default function HomePage() {
       <Header username={username} onLogout={handleLogout} />
 
       <div style={{ padding: 24 }}>
-        <BuscaDesc
-          value={cnpj}
-          onChange={setCnpj}
-          onSubmit={handleSearchCNPJ}
-        />
+        <BuscaDesc value={cnpj} onChange={setCnpj} onSubmit={handleSearchCNPJ} />
 
         {cnpj !== "" &&
           (desc === "" ? (
@@ -223,25 +209,9 @@ export default function HomePage() {
             </Typography>
           ))}
 
-        <CampoDeBuscaGrupo value={ean} onChange={setEan} onSubmit={handleSearch} onActivate={(v) => setIsOn(v)} />
+        <CampoDeBuscaGrupo value={gp} onChange={setGp} onSubmit={handleSearch} onActivate={(v) => setIsOn(v)} />
 
         <CampoDeBusca value={ean} onChange={setEan} onSubmit={handleSearch} onActivate={(v) => setIsOn(v)} />
-
-        {/* Botão On/Off abaixo do botão da câmera */}
-        {/* <div
-          style={{ display: "flex", justifyContent: "center", marginTop: 16 }}
-        >
-          <FormControlLabel
-            control={
-              <Switch
-                checked={isOn}
-                onChange={() => setIsOn(!isOn)}
-                color="primary"
-              />
-            }
-            label={isOn ? "Grupo" : "Reduzido"}
-          />
-        </div> */}
 
         {submittedEan && (
           <Typography variant="subtitle2" sx={{ mb: 2, textAlign: "center" }}>
