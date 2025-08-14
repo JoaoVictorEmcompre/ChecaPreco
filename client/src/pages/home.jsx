@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Typography, Switch, FormControlLabel } from "@mui/material"; // Adicionei Switch e FormControlLabel aqui
+import { Typography, Switch, FormControlLabel } from "@mui/material";
 import CampoDeBusca from "../components/busca";
+import CampoDeBuscaGrupo from "../components/buscaGrupo";
 import TabelaEstoque from "../components/tabela";
 import Header from "../components/header";
 import { useNavigate } from "react-router-dom";
@@ -22,7 +23,7 @@ export default function HomePage() {
   const [desc, setDesc] = useState("");
   const [submittedCnpj, setSubmittedCnpj] = useState("");
   const [msgErro, setMsgErro] = useState("");
-  const [isOn, setIsOn] = useState(false); // Estado para o botão On/Off
+  const [isOn, setIsOn] = useState(false);
 
   useEffect(() => {
     console.log("[useEffect] Verificando username em sessionStorage...");
@@ -132,7 +133,6 @@ export default function HomePage() {
 
         setEstoque(estoqueData);
 
-        // Tenta pegar o productCode do primeiro item do estoque
         const productCode = Array.isArray(estoqueData) && estoqueData.length > 0
           ? estoqueData[0].productCode
           : null;
@@ -201,18 +201,6 @@ export default function HomePage() {
     return desc;
   };
 
-  // Log de props para a tabela, para ajudar debugging visual
-  useEffect(() => {
-    console.log(
-      "[TabelaEstoque props] data:",
-      estoque,
-      "preco:",
-      preco?.price,
-      "desconto:",
-      validaDesc(desc)
-    );
-  }, [estoque, preco, desc]);
-
   return (
     <div>
       <Header username={username} onLogout={handleLogout} />
@@ -235,10 +223,12 @@ export default function HomePage() {
             </Typography>
           ))}
 
-        <CampoDeBusca value={ean} onChange={setEan} onSubmit={handleSearch} />
+        <CampoDeBuscaGrupo value={ean} onChange={setEan} onSubmit={handleSearch} onActivate={(v) => setIsOn(v)} />
+
+        <CampoDeBusca value={ean} onChange={setEan} onSubmit={handleSearch} onActivate={(v) => setIsOn(v)} />
 
         {/* Botão On/Off abaixo do botão da câmera */}
-        <div
+        {/* <div
           style={{ display: "flex", justifyContent: "center", marginTop: 16 }}
         >
           <FormControlLabel
@@ -251,7 +241,7 @@ export default function HomePage() {
             }
             label={isOn ? "Grupo" : "Reduzido"}
           />
-        </div>
+        </div> */}
 
         {submittedEan && (
           <Typography variant="subtitle2" sx={{ mb: 2, textAlign: "center" }}>
