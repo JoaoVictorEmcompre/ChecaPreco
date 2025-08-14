@@ -139,6 +139,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit, onActivate }) 
             alreadyDetected.current = true;
             onChange(texto);
             setTimeout(() => {
+              onActivate?.(false);
               inputRef.current?.focus?.();
               onSubmit(texto);
               lastConfirmed.current = texto;
@@ -292,7 +293,10 @@ export default function CampoDeBusca({ value, onChange, onSubmit, onActivate }) 
 
 
   const handleCloseScanner = () => setOpenScanner(false);
-  const handleOpenScanner = () => setOpenScanner(true);
+  const handleOpenScanner = () => {
+    onActivate?.(false);
+    setOpenScanner(true);
+  }
 
   return (
     <>
