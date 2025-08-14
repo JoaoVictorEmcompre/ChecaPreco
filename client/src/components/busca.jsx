@@ -1,17 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import {
-  Paper,
-  InputBase,
-  IconButton,
-  Box,
-  Dialog,
-  DialogContent,
-  Typography,
-  Button,
-  MenuItem,
-  Select,
-  CircularProgress,
-} from "@mui/material";
+import { Paper, InputBase, IconButton, Box, Dialog, DialogContent, Typography, Button, MenuItem, Select, CircularProgress } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import CloseIcon from "@mui/icons-material/Close";
@@ -19,14 +7,7 @@ import UploadIcon from "@mui/icons-material/Upload";
 import { BrowserMultiFormatReader, BrowserCodeReader } from "@zxing/browser";
 import { DecodeHintType, BarcodeFormat } from "@zxing/library";
 
-// 1. ADICIONADO 'label' E 'showCamera' NAS PROPS
-export default function CampoDeBusca({
-  value,
-  onChange,
-  onSubmit,
-  label,
-  showCamera,
-}) {
+export default function CampoDeBusca({ value, onChange, onSubmit, onActivate }) {
   const [openScanner, setOpenScanner] = useState(false);
   const [videoDevices, setVideoDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
@@ -56,11 +37,17 @@ export default function CampoDeBusca({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    onActivate?.(false);
     onSubmit(value);
   };
 
-  // --- O restante do seu código (lógica do scanner, etc.) permanece o mesmo ---
-  // ... (stopScanner, startScanner, handleImageUpload, etc.)
+  const handleFocus = () => onActivate?.(false);
+
+  const handleChange = (e) => {
+    onActivate?.(false);
+    onChange(e.target.value);
+  };
+
   const stopScanner = async () => {
     console.log("[CampoDeBusca] stopScanner");
     alreadyDetected.current = false;
@@ -81,7 +68,7 @@ export default function CampoDeBusca({
         if (video.srcObject) {
           try {
             video.srcObject.getTracks?.().forEach((t) => t.stop());
-          } catch {}
+          } catch { }
           video.srcObject = null;
         }
         video.removeAttribute?.("src");
@@ -152,6 +139,7 @@ export default function CampoDeBusca({
             alreadyDetected.current = true;
             onChange(texto);
             setTimeout(() => {
+              onActivate?.(false);
               inputRef.current?.focus?.();
               onSubmit(texto);
               lastConfirmed.current = texto;
@@ -303,10 +291,12 @@ export default function CampoDeBusca({
     }
   }, [selectedDeviceId, openScanner, videoDevices]);
 
-  // --- UI ---
 
   const handleCloseScanner = () => setOpenScanner(false);
-  const handleOpenScanner = () => setOpenScanner(true);
+  const handleOpenScanner = () => {
+    onActivate?.(false);
+    setOpenScanner(true);
+  }
 
   return (
     <>
@@ -326,23 +316,21 @@ export default function CampoDeBusca({
           <InputBase
             inputRef={inputRef}
             sx={{ ml: 1, flex: 1, fontSize: 14 }}
-            // 2. USANDO A PROP 'label' COMO PLACEHOLDER
-            placeholder={label}
-            inputProps={{ "aria-label": label }} // E também no aria-label
+            placeholder="Escaneie ou digite o código do item"
+            inputProps={{ "aria-label": "campo de código de barras" }}
             value={value}
-            onChange={(e) => onChange(e.target.value)}
+            onFocus={handleFocus}
+            onChange={handleChange}
           />
 
-          {/* 3. EXIBIÇÃO CONDICIONAL DO ÍCONE DA CÂMERA */}
-          {showCamera && (
-            <IconButton
-              sx={{ p: "10px" }}
-              aria-label="Abrir câmera para leitura de código"
-              onClick={handleOpenScanner}
-            >
-              <CameraAltIcon />
-            </IconButton>
-          )}
+          <IconButton
+            sx={{ p: "10px" }}
+            aria-label="Abrir câmera para leitura de código"
+            onClick={handleOpenScanner}
+          >
+            <CameraAltIcon />
+          </IconButton>
+
 
           <IconButton
             type="submit"
@@ -354,7 +342,6 @@ export default function CampoDeBusca({
         </Paper>
       </Box>
 
-      {/* --- O Dialog do scanner permanece o mesmo --- */}
       <Dialog
         open={openScanner}
         onClose={handleCloseScanner}
@@ -362,9 +349,9 @@ export default function CampoDeBusca({
         fullWidth
         disableEscapeKeyDown={isInitializing}
       >
-               {" "}
+
         <DialogContent sx={{ position: "relative", p: 3 }}>
-                   {" "}
+
           <IconButton
             onClick={handleCloseScanner}
             disabled={isInitializing}
@@ -379,23 +366,23 @@ export default function CampoDeBusca({
             }}
             aria-label="Fechar scanner"
           >
-                        <CloseIcon />         {" "}
+            <CloseIcon />
           </IconButton>
-                   {" "}
+
           <Typography
             variant="h6"
             sx={{ mt: 3, mb: 2, textAlign: "center", fontWeight: 600 }}
           >
-                        Posicione o código de barras no campo abaixo          {" "}
+            Posicione o código de barras no campo abaixo
           </Typography>
-                   {" "}
+
           {videoDevices.length > 1 && (
             <Box sx={{ mb: 2 }}>
-                           {" "}
+
               <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                                Escolha a câmera:              {" "}
+                Escolha a câmera:
               </Typography>
-                           {" "}
+
               <Select
                 fullWidth
                 value={selectedDeviceId}
@@ -403,29 +390,29 @@ export default function CampoDeBusca({
                 disabled={isInitializing}
                 MenuProps={{ disablePortal: true }}
               >
-                               {" "}
+
                 {videoDevices.map((device, idx) => (
                   <MenuItem key={device.deviceId} value={device.deviceId}>
-                                        {device.label || `Câmera ${idx + 1}`}   
-                                 {" "}
+                    {device.label || `Câmera ${idx + 1}`}
+
                   </MenuItem>
                 ))}
-                             {" "}
+
               </Select>
-                         {" "}
+
             </Box>
           )}
-                   {" "}
+
           {isInitializing && (
             <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
-                            <CircularProgress size={24} />             {" "}
+              <CircularProgress size={24} />
               <Typography variant="body2" sx={{ ml: 1, alignSelf: "center" }}>
-                                Inicializando câmera...              {" "}
+                Inicializando câmera...
               </Typography>
-                         {" "}
+
             </Box>
           )}
-                   {" "}
+
           <video
             ref={videoRef}
             style={{
@@ -443,26 +430,26 @@ export default function CampoDeBusca({
             playsInline
             aria-label="Visualização da câmera"
           />
-                   {" "}
+
           {!isInitializing && !scannerReady && videoDevices.length > 0 && (
             <Typography
               variant="body2"
               sx={{ mt: 1, textAlign: "center", color: "warning.main" }}
             >
-                            Aguardando inicialização da câmera...            {" "}
+              Aguardando inicialização da câmera...
             </Typography>
           )}
-                   {" "}
+
           {scannerReady && (
             <Typography
               variant="body2"
               sx={{ mt: 1, textAlign: "center", color: "success.main" }}
             >
-                            Câmera pronta! Posicione o código de barras na tela.
-                         {" "}
+              Câmera pronta! Posicione o código de barras na tela.
+
             </Typography>
           )}
-                   {" "}
+
           <Box
             sx={{
               mt: 3,
@@ -472,9 +459,9 @@ export default function CampoDeBusca({
               gap: 2,
             }}
           >
-                       {" "}
+
             <label htmlFor="upload-image" style={{ width: "100%" }}>
-                           {" "}
+
               <input
                 accept="image/*"
                 id="upload-image"
@@ -482,7 +469,7 @@ export default function CampoDeBusca({
                 style={{ display: "none" }}
                 onChange={handleImageUpload}
               />
-                           {" "}
+
               <Button
                 variant="outlined"
                 fullWidth
@@ -507,15 +494,15 @@ export default function CampoDeBusca({
                 }}
                 aria-label="Carregar imagem do código"
               >
-                                Carregar Imagem do Código              {" "}
+                Carregar Imagem do Código
               </Button>
-                         {" "}
+
             </label>
-                     {" "}
+
           </Box>
-                 {" "}
+
         </DialogContent>
-             {" "}
+
       </Dialog>
     </>
   );
