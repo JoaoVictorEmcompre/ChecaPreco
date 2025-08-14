@@ -101,6 +101,9 @@ export default function HomePage() {
         setPreco(null);
         setEstoque([]);
       }
+
+      setEan('');
+      setGp('');
       return;
     }
 
