@@ -56,7 +56,7 @@ export default function HomePage() {
       ? incomingCode
       : (isOn ? gp : ean);
     const codigo = (raw || "").trim();
-    
+
     console.log("[handleSearch] Modo:", isOn ? "GRUPO" : "SKU/EAN", " | Código:", codigo);
 
     if (!codigo) {
@@ -150,6 +150,9 @@ export default function HomePage() {
         setEstoque([]);
       }
     }
+
+    setGp('');
+    setEan('');
   };
 
   const handleSearchCNPJ = async (valor) => {
