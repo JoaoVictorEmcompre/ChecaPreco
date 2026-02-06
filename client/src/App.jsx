@@ -9,17 +9,17 @@ export default function App() {
   const theme = createTheme({
     typography: {
       fontFamily: '"Poppins", sans-serif',
-      h1: { fontSize: '2.125rem', fontWeight: 600 },
-      h2: { fontSize: '1.375rem', fontWeight: 500 },
-      h3: { fontSize: '1rem', fontWeight: 500 },
+      h1: { fontSize: '2rem', fontWeight: 500 },
+      h2: { fontSize: '1.5rem', fontWeight: 400 },
+      h3: { fontSize: '1.4rem', fontWeight: 400 },
       body1: { fontSize: '0.875rem' },
       body2: { fontSize: '0.8125rem' },
     },
     components: {
       MuiTableCell: {
         styleOverrides: {
-          head: { fontSize: '0.875rem', fontWeight: 600 },
-          body: { fontSize: '0.8125rem' },
+          head: { fontSize: '0.9rem', fontWeight: 600 },
+          body: { fontSize: '0.8rem' },
         },
       },
     },

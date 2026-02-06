@@ -288,7 +288,7 @@ export default function TabelaEstoque({ data, preco, desconto = 0, combos = [] }
             {tipo === "VAR_COR" && <TabelaPorCor grupo={grupo} />}
             {tipo === "VAR_AMBOS" && <TabelaMatriz grupo={grupo} />}
             {tipo === "FIXO" && (
-              <Typography variant="h2" sx={{ mb: 1, fontWeight: 500, color: '#333' }}>
+              <Typography variant="h3" sx={{ mb: 1, fontWeight: 500, color: '#333' }}>
                 Sem variação.
               </Typography>
             )}
