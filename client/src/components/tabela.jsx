@@ -15,11 +15,9 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
     color: theme.palette.common.white,
     border: '1px solid black',
     fontWeight: 600,
-    fontSize: 14,
     textAlign: 'center',
   },
   [`&.${tableCellClasses.body}`]: {
-    fontSize: 13,
     border: '1px solid black',
     padding: '8px 12px',
   },
@@ -112,7 +110,7 @@ function TabelaMatriz({ grupo }) {
 
   return (
     <Box sx={{ position: 'relative' }}>
-      <Typography variant="caption" sx={{ mb: 0.5, display: 'block', color: 'gray', fontSize: 14 }}>Arraste para o lado ↔</Typography>
+      <Typography variant="caption" sx={{ mb: 0.5, display: 'block', color: 'gray' }}>Arraste para o lado ↔</Typography>
       <TableContainer component={Paper} sx={{ mb: 4, overflowX: 'auto' }}>
         <Table>
           <TableHead>
@@ -254,42 +252,46 @@ export default function TabelaEstoque({ data, preco, desconto = 0, combos = [] }
 
         return (
           <div key={ref}>
-            <Typography variant="h1" sx={{ mb: 2, fontWeight: 500, fontSize: 30, color: '#333' }}>
+            <Typography variant="h1" sx={{ mb: 2, fontWeight: 500, color: '#333' }}>
               {nomeBase}
             </Typography>
 
             {desconto > 0 && (
-              <Typography variant="body2" sx={{ fontSize: 16, fontWeight: 400, color: '#888', textDecoration: 'line-through', mb: 0 }} >
+              <Typography variant="body2" sx={{ fontWeight: 400, color: '#888', textDecoration: 'line-through', mb: 0 }} >
                 De: {formataPreco(preco)}
               </Typography>
             )}
 
-            <Typography variant="h1" sx={{ mb: 0, fontWeight: 600, fontSize: 34 }} >
+            <Typography variant="h1" sx={{ mb: 0, fontWeight: 600 }} >
               Por: {formataPreco(precoComDesconto(preco, desconto))}
             </Typography>
 
-            <Typography variant='h3' sx={{ mb: 2, fontWeight: 500, fontSize: 15, color: '#333' }}>
+            <Typography variant='h3' sx={{ mb: 2, fontWeight: 500, color: '#333' }}>
               Preço líquido para você
             </Typography>
 
             {Array.isArray(combos) && combos.length > 0 && (
               <Box sx={{ mb: 2 }}>
                 {combos.map((c, idx) => (
-                  <Typography key={idx} variant="h3" sx={{ fontSize: 15, mb: 0 }}>
+                  <Typography key={idx} variant="h3" sx={{ mb: 0 }}>
                     {`Leve ${c.quantidade} unidades ou mais e pague apenas ${formataPreco(precoComPercentual(preco, c.percentual))}`}
                   </Typography>
                 ))}
               </Box>
             )}
 
-            <Typography variant="h2" sx={{ mb: 1, fontSize: 22, fontWeight: 500, color: '#333' }}>
+            <Typography variant="h2" sx={{ mb: 1, fontWeight: 500, color: '#333' }}>
               {calcularEstoqueTotal(grupo)} unidades disponíveis!
             </Typography>
 
             {tipo === "VAR_TAMANHO" && <TabelaPorTamanho grupo={grupo} />}
             {tipo === "VAR_COR" && <TabelaPorCor grupo={grupo} />}
             {tipo === "VAR_AMBOS" && <TabelaMatriz grupo={grupo} />}
-            {tipo === "FIXO" && <p>Sem variação.</p>}
+            {tipo === "FIXO" && (
+              <Typography variant="h2" sx={{ mb: 1, fontWeight: 500, color: '#333' }}>
+                Sem variação.
+              </Typography>
+            )}
           </div>
         );
       })}
