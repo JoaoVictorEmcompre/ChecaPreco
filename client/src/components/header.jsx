@@ -16,7 +16,6 @@ export default function Header({ username, onLogout }) {
         color: 'white',
         padding: '12px 24px',
         borderRadius: '0 0 8px 8px',
-        fontFamily: 'Montserrat, sans-serif',
       }}
     >
       {/* Esquerda: Nome */}
