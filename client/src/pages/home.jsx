@@ -11,6 +11,7 @@ import { getSku } from "../service/ean";
 import { loginAutomatico } from "../service/login.services";
 import BuscaDesc from "../components/buscaDesc";
 import { getDesc } from "../service/cnpj.services";
+import { getCombo } from "../service/combo.services";
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function HomePage() {
   const [submittedEan, setSubmittedEan] = useState("");
   const [estoque, setEstoque] = useState([]);
   const [preco, setPreco] = useState([]);
+  const [combos, setCombos] = useState([]);
   const [cnpj, setCnpj] = useState("");
   const [desc, setDesc] = useState("");
   const [submittedCnpj, setSubmittedCnpj] = useState("");
@@ -66,6 +68,7 @@ export default function HomePage() {
       setSubmittedEan("");
       setPreco(null);
       setEstoque([]);
+      setCombos([]);
       setMsgErro("");
       return;
     }
@@ -87,9 +90,17 @@ export default function HomePage() {
 
         const precoData = await getPrecoPorGrupo(sku);
         setPreco(precoData);
+        try {
+          const combosData = await getCombo(sku);
+          setCombos(combosData);
+        } catch (e) {
+          console.error("[handleSearch][EAN] Erro combos:", e);
+          setCombos([]);
+        }
 
         if (!precoData?.referenceCode) {
           setEstoque([]);
+          setCombos([]);
           return;
         }
 
@@ -100,6 +111,7 @@ export default function HomePage() {
         setMsgErro("Erro ao buscar produto por EAN.");
         setPreco(null);
         setEstoque([]);
+        setCombos([]);
       }
 
       setEan('');
@@ -113,9 +125,17 @@ export default function HomePage() {
       try {
         const precoData = await getPrecoPorGrupo(codigo);
         setPreco(precoData);
+        try {
+          const combosData = await getCombo(codigo);
+          setCombos(combosData);
+        } catch (e) {
+          console.error("[handleSearch][PADRÃO] Erro combos:", e);
+          setCombos([]);
+        }
 
         if (!precoData?.referenceCode) {
           setEstoque([]);
+          setCombos([]);
           return;
         }
 
@@ -126,6 +146,7 @@ export default function HomePage() {
         setMsgErro("Erro ao buscar produto.");
         setPreco(null);
         setEstoque([]);
+        setCombos([]);
       }
     } else {
       // Fluxo grupo: estoque -> preço (usa `codigo` como grupo/sku conforme seu backend)
@@ -143,11 +164,19 @@ export default function HomePage() {
           setEan('');
           setGp('');
           setPreco(null);
+          setCombos([]);
           return;
         }
 
         const precoData = await getPrecoPorGrupo(productCode);
         setPreco(precoData);
+        try {
+          const combosData = await getCombo(productCode);
+          setCombos(combosData);
+        } catch (e) {
+          console.error("[handleSearch][GRUPO] Erro combos:", e);
+          setCombos([]);
+        }
       } catch (error) {
         console.error("[handleSearch][GRUPO] Erro:", error);
         setMsgErro("Erro ao buscar item pelo grupo.");
@@ -155,6 +184,7 @@ export default function HomePage() {
         setGp('');
         setPreco(null);
         setEstoque([]);
+        setCombos([]);
       }
     }
 
@@ -243,6 +273,7 @@ export default function HomePage() {
           data={estoque}
           preco={preco?.price}
           desconto={validaDesc(desc)}
+          combos={combos}
         />
       </div>
     </div>

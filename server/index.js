@@ -8,6 +8,7 @@ const precoRoutes = require('./routes/preco');
 const estoqueRoutes = require('./routes/estoque');
 const eanRoutes = require('./routes/ean');
 const cnpjRoutes = require('./routes/cnpj');
+const comboRoutes = require('./routes/combo');
 
 const app = express();
 
@@ -45,6 +46,11 @@ app.use('/api/cnpj', (req, res, next) => {
   console.log(`📥 [${new Date().toISOString()}] Rota /api/cnpj acessada`);
   next();
 }, cnpjRoutes);
+
+app.use('/api/combo', (req, res, next) => {
+  console.log(`📥 [${new Date().toISOString()}] Rota /api/combo acessada`);
+  next();
+}, comboRoutes);
 
 // Rota de teste
 app.get('/api/ping', (_, res) => {
