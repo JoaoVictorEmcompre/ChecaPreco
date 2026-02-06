@@ -275,8 +275,8 @@ export default function TabelaEstoque({ data, preco, desconto = 0, combos = [] }
             {Array.isArray(combos) && combos.length > 0 && (
               <Box sx={{ mb: 2 }}>
                 {combos.map((c, idx) => (
-                  <Typography key={idx} variant="body2" sx={{ fontSize: 14, color: '#333' }}>
-                    {`Acima de ${c.quantidade} unidades: ${c.percentual}% de desconto. Preço unitário com desconto: ${formataPreco(precoComPercentual(preco, c.percentual))}`}
+                  <Typography key={idx} variant="h3" sx={{ fontSize: 15, mb: 0 }}>
+                    {`Leve ${c.quantidade} unidades ou mais e pague apenas ${formataPreco(precoComPercentual(preco, c.percentual))}`}
                   </Typography>
                 ))}
               </Box>
@@ -289,7 +289,7 @@ export default function TabelaEstoque({ data, preco, desconto = 0, combos = [] }
             {tipo === "VAR_TAMANHO" && <TabelaPorTamanho grupo={grupo} />}
             {tipo === "VAR_COR" && <TabelaPorCor grupo={grupo} />}
             {tipo === "VAR_AMBOS" && <TabelaMatriz grupo={grupo} />}
-            {tipo === "FIXO" && <p>Produto fixo sem variação.</p>}
+            {tipo === "FIXO" && <p>Sem variação.</p>}
           </div>
         );
       })}
