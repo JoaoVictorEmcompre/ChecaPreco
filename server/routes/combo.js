@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
   console.log(`🌐 [COMBO] Consultando URL externa: ${url}`);
 
   try {
-    const response = await axios.get(url);
+    const response = await axios.get(url, { timeout: 5000 });
     const data = Array.isArray(response.data) ? response.data : [];
 
     console.log('✅ [COMBO] Resposta recebida da API externa. Itens:', data.length);
@@ -63,6 +63,12 @@ router.get('/', async (req, res) => {
 
     res.json({ combos });
   } catch (err) {
+    const isTimeout = err.code === 'ECONNABORTED' || /timeout/i.test(err.message);
+    const noResponse = !err.response;
+    if (isTimeout || noResponse) {
+      console.warn('⚠️ [COMBO] Timeout/rede indisponível ao consultar combos. Retornando lista vazia.');
+      return res.json({ combos: [] });
+    }
     const status = err.response?.status || 500;
     const errorData = err.response?.data || err.message;
 
