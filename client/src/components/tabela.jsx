@@ -227,8 +227,8 @@ function calcularEstoqueTotal(grupo) {
   }, 0);
 }
 
-export default function TabelaEstoque({ data, preco, desconto = 0 }) {
-  console.log('[TabelaEstoque] Render | props:', { data, preco, desconto });
+export default function TabelaEstoque({ data, preco, desconto = 0, combos = [] }) {
+  console.log('[TabelaEstoque] Render | props:', { data, preco, desconto, combos });
   const agrupado = agruparPorReferencia(data);
 
   const precoComDesconto = (preco, desconto) => {
@@ -238,6 +238,11 @@ export default function TabelaEstoque({ data, preco, desconto = 0 }) {
     }
     return preco;
   }
+  const precoComPercentual = (valor, percentual) => {
+    if (typeof valor !== 'number' || typeof percentual !== 'number') return '';
+    const fator = 1 - (percentual / 100);
+    return valor * fator;
+  };
 
   return (
     <>
@@ -266,6 +271,16 @@ export default function TabelaEstoque({ data, preco, desconto = 0 }) {
             <Typography variant='h3' sx={{ mb: 2, fontWeight: 500, fontSize: 15, color: '#333' }}>
               Preço líquido para você
             </Typography>
+
+            {Array.isArray(combos) && combos.length > 0 && (
+              <Box sx={{ mb: 2 }}>
+                {combos.map((c, idx) => (
+                  <Typography key={idx} variant="body2" sx={{ fontSize: 14, color: '#333' }}>
+                    {`Acima de ${c.quantidade} unidades: ${c.percentual}% de desconto. Preço unitário com desconto: ${formataPreco(precoComPercentual(preco, c.percentual))}`}
+                  </Typography>
+                ))}
+              </Box>
+            )}
 
             <Typography variant="h2" sx={{ mb: 1, fontSize: 22, fontWeight: 500, color: '#333' }}>
               {calcularEstoqueTotal(grupo)} unidades disponíveis!
