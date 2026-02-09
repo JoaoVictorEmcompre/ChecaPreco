@@ -236,6 +236,7 @@ export default function TabelaEstoque({ data, preco, desconto = 0, combos = [] }
     }
     return preco;
   }
+  
   const precoComPercentual = (valor, percentual) => {
     if (typeof valor !== 'number' || typeof percentual !== 'number') return '';
     const fator = 1 - (percentual / 100);
@@ -252,21 +253,21 @@ export default function TabelaEstoque({ data, preco, desconto = 0, combos = [] }
 
         return (
           <div key={ref}>
-            <Typography variant="h1" sx={{ mb: 2, fontWeight: 500, color: '#333' }}>
+            <Typography variant="h1" sx={{ mb: 2, color: '#333' }}>
               {nomeBase}
             </Typography>
 
             {desconto > 0 && (
-              <Typography variant="body2" sx={{ fontWeight: 400, color: '#888', textDecoration: 'line-through', mb: 0 }} >
+              <Typography variant="body2" sx={{ color: '#888', textDecoration: 'line-through', mb: 0 }} >
                 De: {formataPreco(preco)}
               </Typography>
             )}
 
-            <Typography variant="h1" sx={{ mb: 0, fontWeight: 600 }} >
+            <Typography variant="h1" sx={{ mb: 0 }} >
               Por: {formataPreco(precoComDesconto(preco, desconto))}
             </Typography>
 
-            <Typography variant='h3' sx={{ mb: 2, fontWeight: 500, color: '#333' }}>
+            <Typography variant='h3' sx={{ mb: 2, color: '#333' }}>
               Preço líquido para você
             </Typography>
 
@@ -274,13 +275,13 @@ export default function TabelaEstoque({ data, preco, desconto = 0, combos = [] }
               <Box sx={{ mb: 2 }}>
                 {combos.map((c, idx) => (
                   <Typography key={idx} variant="h3" sx={{ mb: 0 }}>
-                    {`Leve ${c.quantidade} unidades ou mais e pague apenas ${formataPreco(precoComPercentual(preco, c.percentual))}`}
+                    {`Leve ${c.quantidade} unidades ou mais e pague apenas ${formataPreco(precoComPercentual(precoComDesconto(preco, desconto), c.percentual))}`}
                   </Typography>
                 ))}
               </Box>
             )}
 
-            <Typography variant="h2" sx={{ mb: 1, fontWeight: 500, color: '#333' }}>
+            <Typography variant="h2" sx={{ mb: 1, color: '#333' }}>
               {calcularEstoqueTotal(grupo)} unidades disponíveis!
             </Typography>
 
@@ -288,7 +289,7 @@ export default function TabelaEstoque({ data, preco, desconto = 0, combos = [] }
             {tipo === "VAR_COR" && <TabelaPorCor grupo={grupo} />}
             {tipo === "VAR_AMBOS" && <TabelaMatriz grupo={grupo} />}
             {tipo === "FIXO" && (
-              <Typography variant="h3" sx={{ mb: 1, fontWeight: 500, color: '#333' }}>
+              <Typography variant="h3" sx={{ mb: 1, color: '#333' }}>
                 Sem variação.
               </Typography>
             )}
