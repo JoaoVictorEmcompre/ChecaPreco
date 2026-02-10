@@ -257,12 +257,6 @@ export default function HomePage() {
 
         <CampoDeBusca value={ean} onChange={setEan} onSubmit={handleSearch} onActivate={(v) => setIsOn(v)} />
 
-        {submittedEan && (
-          <Typography variant="subtitle2" sx={{ mb: 2, textAlign: "center" }}>
-            Resultado da busca por: <strong>{submittedEan}</strong>
-          </Typography>
-        )}
-
         {msgErro !== "" && (
           <Typography variant="subtitle1" sx={{ mb: 2, textAlign: "center" }}>
             <strong>{msgErro}</strong>
@@ -274,6 +268,7 @@ export default function HomePage() {
           preco={preco?.price}
           desconto={validaDesc(desc)}
           combos={combos}
+          cod={submittedEan}
         />
       </div>
     </div>

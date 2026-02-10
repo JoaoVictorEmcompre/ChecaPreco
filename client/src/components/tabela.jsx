@@ -225,8 +225,8 @@ function calcularEstoqueTotal(grupo) {
   }, 0);
 }
 
-export default function TabelaEstoque({ data, preco, desconto = 0, combos = [] }) {
-  console.log('[TabelaEstoque] Render | props:', { data, preco, desconto, combos });
+export default function TabelaEstoque({ data, preco, desconto = 0, combos = [], cod }) {
+  console.log('[TabelaEstoque] Render | props:', { data, preco, desconto, combos, cod });
   const agrupado = agruparPorReferencia(data);
 
   const precoComDesconto = (preco, desconto) => {
@@ -236,7 +236,7 @@ export default function TabelaEstoque({ data, preco, desconto = 0, combos = [] }
     }
     return preco;
   }
-  
+
   const precoComPercentual = (valor, percentual) => {
     if (typeof valor !== 'number' || typeof percentual !== 'number') return '';
     const fator = 1 - (percentual / 100);
@@ -253,43 +253,69 @@ export default function TabelaEstoque({ data, preco, desconto = 0, combos = [] }
 
         return (
           <div key={ref}>
-            <Typography variant="h1" sx={{ mb: 2, color: '#333' }}>
+            <Typography variant="h1" sx={{ mb: 1, mp: 2, fontSize: '18px', fontWeight: 300, color: '#333' }}>
+              Código: {cod}
+            </Typography>
+
+            <Typography variant="h1" sx={{ mb: 1, color: '#333', fontSize: '28px', fontWeight: 400 }}>  
               {nomeBase}
             </Typography>
 
             {desconto > 0 && (
-              <Typography variant="body2" sx={{ color: '#888', textDecoration: 'line-through', mb: 0 }} >
-                De: {formataPreco(preco)}
+              <Typography variant="body2" sx={{ color: '#888', textDecoration: 'line-through', mb: 1, fontSize: '18px', fontWeight: 400 }} >
+                Preço: {formataPreco(preco)}
               </Typography>
             )}
 
-            <Typography variant="h1" sx={{ mb: 0 }} >
-              Por: {formataPreco(precoComDesconto(preco, desconto))}
-            </Typography>
-
-            <Typography variant='h3' sx={{ mb: 2, color: '#333' }}>
-              Preço líquido para você
-            </Typography>
+            {desconto > 0 ? (
+              <Typography variant="h1" sx={{ mb: 1, color: '#333', fontSize: '30px', fontWeight: 400 }}>
+                Para você: {formataPreco(precoComDesconto(preco, desconto))}
+              </Typography>
+            ) : (
+              <Typography variant="h1" sx={{ mb: 2, color: '#333', fontSize: '30px', fontWeight: 400 }}>
+                Preço: {formataPreco(precoComDesconto(preco, desconto))}
+              </Typography>
+            )}
 
             {Array.isArray(combos) && combos.length > 0 && (
               <Box sx={{ mb: 2 }}>
-                {combos.map((c, idx) => (
-                  <Typography key={idx} variant="h3" sx={{ mb: 0 }}>
-                    {`Leve ${c.quantidade} unidades ou mais e pague apenas ${formataPreco(precoComPercentual(precoComDesconto(preco, desconto), c.percentual))}`}
-                  </Typography>
-                ))}
+                {combos.map((c, idx) => {
+                  const valor = formataPreco(
+                    precoComPercentual(precoComDesconto(preco, desconto), c.percentual)
+                  );
+
+                  return (
+                    <Box
+                      key={idx}
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: 3,
+                      }}
+                    >
+                      <Typography variant="h3" sx={{ mb: 0, fontWeight: 400, fontSize: '20px' }}>
+                        Leve {c.quantidade} unidades ou mais e pague:
+                      </Typography>
+
+                      <Typography variant="h3" sx={{ mb: 0, fontWeight: 400, fontSize: '28px', whiteSpace: "nowrap", mr: 4 }}>
+                        {valor}
+                      </Typography>
+                    </Box>
+                  );
+                })}
               </Box>
             )}
 
-            <Typography variant="h2" sx={{ mb: 1, color: '#333' }}>
-              {calcularEstoqueTotal(grupo)} unidades disponíveis!
+            <Typography variant="h2" sx={{ mb: 1, color: '#333', fontSize: '22px', fontWeight: 400 }}>
+              Quantidade Estoque: {calcularEstoqueTotal(grupo)}
             </Typography>
 
             {tipo === "VAR_TAMANHO" && <TabelaPorTamanho grupo={grupo} />}
             {tipo === "VAR_COR" && <TabelaPorCor grupo={grupo} />}
             {tipo === "VAR_AMBOS" && <TabelaMatriz grupo={grupo} />}
             {tipo === "FIXO" && (
-              <Typography variant="h3" sx={{ mb: 1, color: '#333' }}>
+              <Typography variant="h3" sx={{ mb: 1, color: '#333', fontSize: '18px', fontWeight: 400 }}>
                 Sem variação.
               </Typography>
             )}

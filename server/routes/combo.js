@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
     return res.status(400).json({ error: 'groupCode é obrigatório.' });
   }
 
-  const url = `http://187.95.116.54:9989/pcp/combo/${groupCode}`;
+  const url = `http://192.168.3.214:8090/pcp/combo/${groupCode}`;
   console.log(`🌐 [COMBO] Consultando URL externa: ${url}`);
 
   try {
