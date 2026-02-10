@@ -11,13 +11,6 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true,
       allowedHosts: ['bfchecapreco.vps-kinghost.net'],
-      proxy: {
-        '/api': {
-          target: 'http://localhost:5000',
-          changeOrigin: true,
-          secure: false,
-        },
-      }
     },
   }
 })

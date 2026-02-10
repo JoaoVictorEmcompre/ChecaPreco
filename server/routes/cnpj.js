@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
     }
 
     try {
-        const url = `http://192.168.3.214:8090/pcp/cnpj/${codigo}`;
+        const url = `http://187.95.116.54:9989/pcp/cnpj/${codigo}`;
         console.log(`🔍 [CNPJ] Consultando URL externa: ${url}`);
 
         const response = await axios.get(url);
