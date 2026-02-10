@@ -230,12 +230,14 @@ export default function TabelaEstoque({ data, preco, desconto = 0, combos = [], 
   const agrupado = agruparPorReferencia(data);
 
   const precoComDesconto = (preco, desconto) => {
-    if (desconto === '10') {
-      const valorFinal = (9 * preco) / 10;
-      return valorFinal;
-    }
-    return preco;
-  }
+    const percentual = Number(desconto);
+
+    if (!Number.isFinite(preco) || !Number.isFinite(percentual)) return preco;
+
+    const fator = 1 - (percentual / 100);
+    return Number((preco * fator).toFixed(2));
+  };
+
 
   const precoComPercentual = (valor, percentual) => {
     if (typeof valor !== 'number' || typeof percentual !== 'number') return '';
@@ -253,16 +255,23 @@ export default function TabelaEstoque({ data, preco, desconto = 0, combos = [], 
 
         return (
           <div key={ref}>
+
+            {desconto > 0 && (
+              <Typography variant="h1" sx={{ mb: 1, mp: 2, fontSize: '18px', fontWeight: 300, color: '#333' }}>
+                Desconto CNPJ: {desconto}%
+              </Typography>
+            )}
+
             <Typography variant="h1" sx={{ mb: 1, mp: 2, fontSize: '18px', fontWeight: 300, color: '#333' }}>
               Código: {cod}
             </Typography>
 
-            <Typography variant="h1" sx={{ mb: 1, color: '#333', fontSize: '28px', fontWeight: 400 }}>  
+            <Typography variant="h1" sx={{ mb: 1, color: '#333', fontSize: '28px', fontWeight: 400 }}>
               {nomeBase}
             </Typography>
 
             {desconto > 0 && (
-              <Typography variant="body2" sx={{ color: '#888', textDecoration: 'line-through', mb: 1, fontSize: '18px', fontWeight: 400 }} >
+              <Typography variant="body2" sx={{ color: '#888', textDecoration: 'line-through', mb: -1, fontSize: '19px', fontWeight: 400 }} >
                 Preço: {formataPreco(preco)}
               </Typography>
             )}
@@ -298,7 +307,7 @@ export default function TabelaEstoque({ data, preco, desconto = 0, combos = [], 
                         Leve {c.quantidade} unidades ou mais e pague:
                       </Typography>
 
-                      <Typography variant="h3" sx={{ mb: 0, fontWeight: 400, fontSize: '28px', whiteSpace: "nowrap", mr: 4 }}>
+                      <Typography variant="h3" sx={{ mb: 0, fontWeight: 400, fontSize: '28px', whiteSpace: "nowrap", mr: 5.6 }}>
                         {valor}
                       </Typography>
                     </Box>

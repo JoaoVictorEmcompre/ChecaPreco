@@ -242,17 +242,6 @@ export default function HomePage() {
       <div style={{ padding: 24 }}>
         <BuscaDesc value={cnpj} onChange={setCnpj} onSubmit={handleSearchCNPJ} />
 
-        {cnpj !== "" &&
-          (desc === "" ? (
-            <Typography variant="subtitle2" sx={{ mb: 2, textAlign: "center" }}>
-              <strong>Usuário sem desconto</strong>
-            </Typography>
-          ) : (
-            <Typography variant="subtitle2" sx={{ mb: 2, textAlign: "center" }}>
-              Desconto: <strong>{validaDesc(desc)}%</strong>
-            </Typography>
-          ))}
-
         <CampoDeBuscaGrupo value={gp} onChange={setGp} onSubmit={handleSearch} onActivate={(v) => setIsOn(v)} />
 
         <CampoDeBusca value={ean} onChange={setEan} onSubmit={handleSearch} onActivate={(v) => setIsOn(v)} />
