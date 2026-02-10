@@ -242,26 +242,9 @@ export default function HomePage() {
       <div style={{ padding: 24 }}>
         <BuscaDesc value={cnpj} onChange={setCnpj} onSubmit={handleSearchCNPJ} />
 
-        {cnpj !== "" &&
-          (desc === "" ? (
-            <Typography variant="subtitle2" sx={{ mb: 2, textAlign: "center" }}>
-              <strong>Usuário sem desconto</strong>
-            </Typography>
-          ) : (
-            <Typography variant="subtitle2" sx={{ mb: 2, textAlign: "center" }}>
-              Desconto: <strong>{validaDesc(desc)}%</strong>
-            </Typography>
-          ))}
-
         <CampoDeBuscaGrupo value={gp} onChange={setGp} onSubmit={handleSearch} onActivate={(v) => setIsOn(v)} />
 
         <CampoDeBusca value={ean} onChange={setEan} onSubmit={handleSearch} onActivate={(v) => setIsOn(v)} />
-
-        {submittedEan && (
-          <Typography variant="subtitle2" sx={{ mb: 2, textAlign: "center" }}>
-            Resultado da busca por: <strong>{submittedEan}</strong>
-          </Typography>
-        )}
 
         {msgErro !== "" && (
           <Typography variant="subtitle1" sx={{ mb: 2, textAlign: "center" }}>
@@ -274,6 +257,7 @@ export default function HomePage() {
           preco={preco?.price}
           desconto={validaDesc(desc)}
           combos={combos}
+          cod={submittedEan}
         />
       </div>
     </div>
