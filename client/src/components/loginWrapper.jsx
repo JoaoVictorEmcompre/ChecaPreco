@@ -1,4 +1,4 @@
-import { Paper, Typography } from '@mui/material';
+import { Paper, Typography, Box } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import Logo from '../assets/logo-bf-red.png';
 
@@ -10,36 +10,58 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
   maxWidth: 400,
   margin: 'auto',
   marginTop: theme.spacing(8),
-  borderRadius: theme.spacing(2),
-  boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+  borderRadius: 24,
+  border: '1px solid rgba(0,0,0,0.06)',
+  boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
 }));
 
 export default function LoginWrapper({ children }) {
-  // Loga toda vez que o wrapper renderiza e mostra quantos children ele recebeu
   console.log('[LoginWrapper] Renderizado | children:', Array.isArray(children) ? children.length : 1);
 
   return (
-    <StyledPaper elevation={6}>
-      <img
-        src={Logo}
-        alt="Bandfashion Logo"
-        style={{
-          width: '80px',
-          marginBottom: '1.5rem',
-          marginTop: '-0.5rem',
-          filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.15))'
+    <StyledPaper elevation={0}>
+      <Box
+        sx={{
+          width: 72,
+          height: 72,
+          borderRadius: '18px',
+          bgcolor: '#fef2f2',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          mb: 2.5,
+          mt: -0.5,
         }}
-      />
+      >
+        <img
+          src={Logo}
+          alt="Bandfashion Logo"
+          style={{
+            width: '48px',
+          }}
+        />
+      </Box>
       <Typography
         variant="h4"
         sx={{
           fontWeight: 700,
-          color: '#CB3B31',
+          color: '#1a1a2e',
           textAlign: 'center',
-          marginBottom: '1rem'
+          marginBottom: '0.5rem',
+          fontSize: '1.5rem',
         }}
       >
         Entrar na Conta
+      </Typography>
+      <Typography
+        variant="body2"
+        sx={{
+          color: '#94a3b8',
+          textAlign: 'center',
+          mb: 3,
+        }}
+      >
+        Acesse sua conta para consultar precos
       </Typography>
       {children}
     </StyledPaper>

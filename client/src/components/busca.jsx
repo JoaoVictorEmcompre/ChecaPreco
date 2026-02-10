@@ -4,6 +4,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import CloseIcon from "@mui/icons-material/Close";
 import UploadIcon from "@mui/icons-material/Upload";
+import QrCodeScannerIcon from "@mui/icons-material/QrCodeScanner";
 import { BrowserMultiFormatReader, BrowserCodeReader } from "@zxing/browser";
 import { DecodeHintType, BarcodeFormat } from "@zxing/library";
 
@@ -82,11 +83,11 @@ export default function CampoDeBusca({ value, onChange, onSubmit, onActivate }) 
   };
   const startScanner = async (deviceId) => {
     if (!deviceId || !openScanner) {
-      console.warn("[CampoDeBusca] Device ID inválido ou scanner fechado");
+      console.warn("[CampoDeBusca] Device ID invalido ou scanner fechado");
       return;
     }
     if (isStartingRef.current) {
-      console.log("[CampoDeBusca] startScanner ignorado: já iniciando");
+      console.log("[CampoDeBusca] startScanner ignorado: ja iniciando");
       return;
     }
     isStartingRef.current = true;
@@ -135,7 +136,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit, onActivate }) 
             if (alreadyDetected.current) return;
             if (texto === value) return;
             if (texto === lastConfirmed.current) return;
-            console.log("[CampoDeBusca] Código detectado:", texto);
+            console.log("[CampoDeBusca] Codigo detectado:", texto);
             alreadyDetected.current = true;
             onChange(texto);
             setTimeout(() => {
@@ -154,7 +155,7 @@ export default function CampoDeBusca({ value, onChange, onSubmit, onActivate }) 
             )
           ) {
             console.warn(
-              "[CampoDeBusca] Erro na decodificação:",
+              "[CampoDeBusca] Erro na decodificacao:",
               error.message
             );
           }
@@ -165,11 +166,11 @@ export default function CampoDeBusca({ value, onChange, onSubmit, onActivate }) 
       console.error("[CampoDeBusca] Erro ao iniciar scanner:", err);
       let errorMessage = "Erro ao iniciar o scanner.";
       if (err.name === "NotAllowedError")
-        errorMessage = "Permissão negada para acessar a câmera.";
+        errorMessage = "Permissao negada para acessar a camera.";
       else if (err.name === "NotFoundError")
-        errorMessage = "Câmera não encontrada.";
+        errorMessage = "Camera nao encontrada.";
       else if (err.name === "NotReadableError")
-        errorMessage = "Câmera está sendo usada por outro aplicativo.";
+        errorMessage = "Camera esta sendo usada por outro aplicativo.";
       alert(errorMessage);
       setScannerReady(false);
       setOpenScanner(false);
@@ -193,10 +194,10 @@ export default function CampoDeBusca({ value, onChange, onSubmit, onActivate }) 
         const result = await reader.decodeFromImageElement(img);
         const texto = result.getText();
         if (texto === value || texto === lastConfirmed.current) {
-          console.log("[CampoDeBusca] Imagem com código duplicado, ignorando.");
+          console.log("[CampoDeBusca] Imagem com codigo duplicado, ignorando.");
           return;
         }
-        console.log("[CampoDeBusca] Código detectado na imagem:", texto);
+        console.log("[CampoDeBusca] Codigo detectado na imagem:", texto);
         onChange(texto);
         setTimeout(() => {
           inputRef.current?.focus?.();
@@ -205,9 +206,9 @@ export default function CampoDeBusca({ value, onChange, onSubmit, onActivate }) 
           setOpenScanner(false);
         }, 100);
       } catch (err) {
-        console.warn("[CampoDeBusca] Código não detectado na imagem:", err);
+        console.warn("[CampoDeBusca] Codigo nao detectado na imagem:", err);
         alert(
-          "Não foi possível detectar um código de barras EAN-13 na imagem."
+          "Nao foi possivel detectar um codigo de barras EAN-13 na imagem."
         );
       } finally {
         URL.revokeObjectURL(imageUrl);
@@ -224,16 +225,16 @@ export default function CampoDeBusca({ value, onChange, onSubmit, onActivate }) 
   };
   const fetchVideoDevices = async () => {
     try {
-      console.log("[CampoDeBusca] Solicitando permissão para câmera...");
+      console.log("[CampoDeBusca] Solicitando permissao para camera...");
       const tmp = await navigator.mediaDevices.getUserMedia({ video: true });
       tmp.getTracks().forEach((t) => t.stop());
       console.log(
-        "[CampoDeBusca] Permissão concedida, buscando dispositivos..."
+        "[CampoDeBusca] Permissao concedida, buscando dispositivos..."
       );
       const devices = await listVideoInputDevicesSafe();
       if (!devices || devices.length === 0) {
-        console.warn("[CampoDeBusca] Nenhum dispositivo de vídeo encontrado");
-        alert("Nenhuma câmera encontrada.");
+        console.warn("[CampoDeBusca] Nenhum dispositivo de video encontrado");
+        alert("Nenhuma camera encontrada.");
         setOpenScanner(false);
         return;
       }
@@ -248,12 +249,12 @@ export default function CampoDeBusca({ value, onChange, onSubmit, onActivate }) 
       setSelectedDeviceId(defaultDevice.deviceId);
     } catch (err) {
       console.error("[CampoDeBusca] Erro ao buscar dispositivos:", err);
-      let errorMessage = "Erro ao acessar as câmeras.";
+      let errorMessage = "Erro ao acessar as cameras.";
       if (err.name === "NotAllowedError")
         errorMessage =
-          "Permissão negada para acessar a câmera. Verifique as configurações do navegador.";
+          "Permissao negada para acessar a camera. Verifique as configuracoes do navegador.";
       else if (err.name === "NotFoundError")
-        errorMessage = "Nenhuma câmera encontrada no dispositivo.";
+        errorMessage = "Nenhuma camera encontrada no dispositivo.";
       alert(errorMessage);
       setOpenScanner(false);
     }
@@ -300,44 +301,77 @@ export default function CampoDeBusca({ value, onChange, onSubmit, onActivate }) 
 
   return (
     <>
-      <Box sx={{ mb: 2, display: "flex", justifyContent: "center" }}>
+      <Box sx={{ mb: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <Box sx={{ width: '100%', maxWidth: 400, mb: 0.5 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'text.secondary',
+              fontWeight: 600,
+              ml: 0.5,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+            }}
+          >
+            <QrCodeScannerIcon sx={{ fontSize: '0.9rem' }} />
+            Codigo do Item
+          </Typography>
+        </Box>
         <Paper
           component="form"
           sx={{
-            p: "2px 8px",
+            p: "4px 6px",
             display: "flex",
             alignItems: "center",
-            width: 360,
-            borderRadius: 6,
-            backgroundColor: "#f1f5f9",
+            width: '100%',
+            maxWidth: 400,
+            borderRadius: 3,
+            backgroundColor: '#fff',
+            border: '1.5px solid #e2e8f0',
+            boxShadow: 'none',
+            transition: 'all 0.2s ease',
+            '&:focus-within': {
+              borderColor: '#CB3B31',
+              boxShadow: '0 0 0 3px rgba(203, 59, 49, 0.1)',
+            },
           }}
           onSubmit={handleSubmit}
         >
           <InputBase
             inputRef={inputRef}
-            sx={{ ml: 1, flex: 1, fontSize: 14 }}
-            placeholder="Escaneie ou digite o código do item"
-            inputProps={{ "aria-label": "campo de código de barras" }}
+            sx={{ ml: 1.5, flex: 1, fontSize: '0.875rem' }}
+            placeholder="Escaneie ou digite o codigo"
+            inputProps={{ "aria-label": "campo de codigo de barras" }}
             value={value}
             onFocus={handleFocus}
             onChange={handleChange}
           />
 
           <IconButton
-            sx={{ p: "10px" }}
-            aria-label="Abrir câmera para leitura de código"
+            sx={{
+              p: "8px",
+              color: '#64748b',
+              '&:hover': { color: '#CB3B31', bgcolor: 'rgba(203, 59, 49, 0.08)' },
+              transition: 'all 0.2s ease',
+            }}
+            aria-label="Abrir camera para leitura de codigo"
             onClick={handleOpenScanner}
           >
-            <CameraAltIcon />
+            <CameraAltIcon sx={{ fontSize: '1.2rem' }} />
           </IconButton>
-
 
           <IconButton
             type="submit"
-            sx={{ p: "10px" }}
-            aria-label="Buscar item pelo código"
+            sx={{
+              p: '8px',
+              color: '#CB3B31',
+              bgcolor: 'rgba(203, 59, 49, 0.08)',
+              '&:hover': { bgcolor: 'rgba(203, 59, 49, 0.15)' },
+            }}
+            aria-label="Buscar item pelo codigo"
           >
-            <SearchIcon />
+            <SearchIcon sx={{ fontSize: '1.2rem' }} />
           </IconButton>
         </Paper>
       </Box>
@@ -348,6 +382,12 @@ export default function CampoDeBusca({ value, onChange, onSubmit, onActivate }) 
         maxWidth="sm"
         fullWidth
         disableEscapeKeyDown={isInitializing}
+        PaperProps={{
+          sx: {
+            borderRadius: 4,
+            overflow: 'hidden',
+          }
+        }}
       >
 
         <DialogContent sx={{ position: "relative", p: 3 }}>
@@ -357,43 +397,45 @@ export default function CampoDeBusca({ value, onChange, onSubmit, onActivate }) 
             disabled={isInitializing}
             sx={{
               position: "absolute",
-              top: 8,
-              right: 8,
-              backgroundColor: "#f0f0f0",
-              "&:hover": { backgroundColor: "#e0e0e0" },
+              top: 12,
+              right: 12,
+              backgroundColor: "rgba(0,0,0,0.05)",
+              "&:hover": { backgroundColor: "rgba(0,0,0,0.1)" },
               "&:disabled": { backgroundColor: "#f5f5f5" },
               zIndex: 10,
             }}
             aria-label="Fechar scanner"
           >
-            <CloseIcon />
+            <CloseIcon sx={{ fontSize: '1.1rem' }} />
           </IconButton>
 
           <Typography
-            variant="h6"
-            sx={{ mt: 3, mb: 2, textAlign: "center", fontWeight: 600 }}
+            variant="h3"
+            sx={{ mt: 2, mb: 2, textAlign: "center" }}
           >
-            Posicione o código de barras no campo abaixo
+            Posicione o codigo de barras
           </Typography>
 
           {videoDevices.length > 1 && (
             <Box sx={{ mb: 2 }}>
 
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                Escolha a câmera:
+              <Typography variant="caption" sx={{ mb: 0.5, display: 'block', fontWeight: 600, color: 'text.secondary' }}>
+                Escolha a camera:
               </Typography>
 
               <Select
                 fullWidth
+                size="small"
                 value={selectedDeviceId}
                 onChange={(e) => setSelectedDeviceId(e.target.value)}
                 disabled={isInitializing}
                 MenuProps={{ disablePortal: true }}
+                sx={{ borderRadius: 2 }}
               >
 
                 {videoDevices.map((device, idx) => (
                   <MenuItem key={device.deviceId} value={device.deviceId}>
-                    {device.label || `Câmera ${idx + 1}`}
+                    {device.label || `Camera ${idx + 1}`}
 
                   </MenuItem>
                 ))}
@@ -404,59 +446,70 @@ export default function CampoDeBusca({ value, onChange, onSubmit, onActivate }) 
           )}
 
           {isInitializing && (
-            <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
-              <CircularProgress size={24} />
-              <Typography variant="body2" sx={{ ml: 1, alignSelf: "center" }}>
-                Inicializando câmera...
+            <Box sx={{ display: "flex", justifyContent: "center", alignItems: 'center', mb: 2, gap: 1 }}>
+              <CircularProgress size={20} sx={{ color: '#CB3B31' }} />
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Inicializando camera...
               </Typography>
-
             </Box>
           )}
 
-          <video
-            ref={videoRef}
-            style={{
-              width: "100%",
-              height: "auto",
-              borderRadius: 10,
-              border: "2px solid #ddd",
-              boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-              backgroundColor: "#000",
-              minHeight: "200px",
-              opacity: scannerReady ? 1 : 0.5,
-            }}
-            autoPlay
-            muted
-            playsInline
-            aria-label="Visualização da câmera"
-          />
+          <Box sx={{ borderRadius: 3, overflow: 'hidden', border: '2px solid #e2e8f0', position: 'relative' }}>
+            <video
+              ref={videoRef}
+              style={{
+                width: "100%",
+                height: "auto",
+                display: 'block',
+                backgroundColor: "#111",
+                minHeight: "200px",
+                opacity: scannerReady ? 1 : 0.4,
+                transition: 'opacity 0.3s ease',
+              }}
+              autoPlay
+              muted
+              playsInline
+              aria-label="Visualizacao da camera"
+            />
+            {scannerReady && (
+              <Box sx={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '70%',
+                height: '40%',
+                border: '2px solid rgba(203, 59, 49, 0.6)',
+                borderRadius: 2,
+                pointerEvents: 'none',
+              }} />
+            )}
+          </Box>
 
           {!isInitializing && !scannerReady && videoDevices.length > 0 && (
             <Typography
               variant="body2"
-              sx={{ mt: 1, textAlign: "center", color: "warning.main" }}
+              sx={{ mt: 1, textAlign: "center", color: "text.secondary" }}
             >
-              Aguardando inicialização da câmera...
+              Aguardando camera...
             </Typography>
           )}
 
           {scannerReady && (
             <Typography
               variant="body2"
-              sx={{ mt: 1, textAlign: "center", color: "success.main" }}
+              sx={{ mt: 1.5, textAlign: "center", color: "success.main", fontWeight: 500 }}
             >
-              Câmera pronta! Posicione o código de barras na tela.
-
+              Camera pronta! Posicione o codigo de barras.
             </Typography>
           )}
 
           <Box
             sx={{
-              mt: 3,
+              mt: 2.5,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: 2,
             }}
           >
 
@@ -477,24 +530,25 @@ export default function CampoDeBusca({ value, onChange, onSubmit, onActivate }) 
                 startIcon={<UploadIcon />}
                 disabled={isInitializing}
                 sx={{
-                  borderRadius: 6,
-                  borderColor: "#CB3B31",
-                  color: "#CB3B31",
+                  borderRadius: 3,
+                  borderColor: "#e2e8f0",
+                  borderWidth: '1.5px',
+                  color: "#64748b",
                   fontWeight: 600,
-                  textAlign: "center",
+                  py: 1.2,
                   "&:hover": {
-                    backgroundColor: "#fdecea",
-                    borderColor: "#b71c1c",
-                    color: "#b71c1c",
+                    backgroundColor: "rgba(203, 59, 49, 0.04)",
+                    borderColor: "#CB3B31",
+                    color: "#CB3B31",
                   },
                   "&:disabled": {
-                    borderColor: "#ccc",
+                    borderColor: "#eee",
                     color: "#ccc",
                   },
                 }}
-                aria-label="Carregar imagem do código"
+                aria-label="Carregar imagem do codigo"
               >
-                Carregar Imagem do Código
+                Carregar Imagem do Codigo
               </Button>
 
             </label>

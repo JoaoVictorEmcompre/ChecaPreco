@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Typography } from "@mui/material";
+import { Typography, Box, Chip } from "@mui/material";
 import CampoDeBusca from "../components/busca";
 import CampoDeBuscaGrupo from "../components/buscaGrupo";
 import TabelaEstoque from "../components/tabela";
@@ -34,23 +34,23 @@ export default function HomePage() {
     if (!user) {
       // navigate('/Login'); ATIVAR NOVAMENTE QUANDO VOLTAR O LOGIN
       // LOGIN AUTOMATICO
-      console.log("[useEffect] Sem usuário logado, executando loginAutomatico");
+      console.log("[useEffect] Sem usuario logado, executando loginAutomatico");
       loginAutomatico().then(() => {
         const usuario = sessionStorage.getItem("username");
         if (usuario) {
-          console.log("[useEffect] Login automático realizado:", usuario);
+          console.log("[useEffect] Login automatico realizado:", usuario);
           setUsername(usuario);
         } else {
-          console.warn("[useEffect] Login automático falhou.");
+          console.warn("[useEffect] Login automatico falhou.");
         }
       });
     } else {
-      console.log("[useEffect] Usuário já logado:", user);
+      console.log("[useEffect] Usuario ja logado:", user);
       setUsername(user);
     }
   }, []);
 
-  const isEan = (codigo) => /^\d{13,}$/.test(codigo); // 13+ dígitos = EAN
+  const isEan = (codigo) => /^\d{13,}$/.test(codigo); // 13+ digitos = EAN
 
   const handleSearch = async (incomingCode) => {
     // Sempre usa o campo correspondente ao modo atual
@@ -59,7 +59,7 @@ export default function HomePage() {
       : (isOn ? gp : ean);
     const codigo = (raw || "").trim();
 
-    console.log("[handleSearch] Modo:", isOn ? "GRUPO" : "SKU/EAN", " | Código:", codigo);
+    console.log("[handleSearch] Modo:", isOn ? "GRUPO" : "SKU/EAN", " | Codigo:", codigo);
 
     if (!codigo) {
       // limpa tudo
@@ -77,12 +77,12 @@ export default function HomePage() {
     setSubmittedEan(codigo);
     setMsgErro("");
 
-    // 1) Se for EAN: resolve para SKU e segue pelo fluxo padrão EAN
+    // 1) Se for EAN: resolve para SKU e segue pelo fluxo padrao EAN
     if (isEan(codigo)) {
       try {
         const sku = await getSku(codigo);
         if (sku === null) {
-          setMsgErro("Produto não encontrado");
+          setMsgErro("Produto nao encontrado");
           setPreco(null);
           setEstoque([]);
           return;
@@ -119,9 +119,9 @@ export default function HomePage() {
       return;
     }
 
-    // 2) Não é EAN: decide fluxo pelo isOn
+    // 2) Nao e EAN: decide fluxo pelo isOn
     if (!isOn) {
-      // Fluxo padrão: preço -> estoque (usa `codigo` como SKU/código)
+      // Fluxo padrao: preco -> estoque (usa `codigo` como SKU/codigo)
       try {
         const precoData = await getPrecoPorGrupo(codigo);
         setPreco(precoData);
@@ -129,7 +129,7 @@ export default function HomePage() {
           const combosData = await getCombo(codigo);
           setCombos(combosData);
         } catch (e) {
-          console.error("[handleSearch][PADRÃO] Erro combos:", e);
+          console.error("[handleSearch][PADRAO] Erro combos:", e);
           setCombos([]);
         }
 
@@ -142,14 +142,14 @@ export default function HomePage() {
         const estoqueData = await getEstoque(precoData.referenceCode);
         setEstoque(estoqueData);
       } catch (error) {
-        console.error("[handleSearch][PADRÃO] Erro:", error);
+        console.error("[handleSearch][PADRAO] Erro:", error);
         setMsgErro("Erro ao buscar produto.");
         setPreco(null);
         setEstoque([]);
         setCombos([]);
       }
     } else {
-      // Fluxo grupo: estoque -> preço (usa `codigo` como grupo/sku conforme seu backend)
+      // Fluxo grupo: estoque -> preco (usa `codigo` como grupo/sku conforme seu backend)
       try {
         const estoqueData = await getEstoque(codigo);
         setEstoque(estoqueData);
@@ -160,7 +160,7 @@ export default function HomePage() {
             : null;
 
         if (!productCode) {
-          setMsgErro("Estoque não encontrado");
+          setMsgErro("Estoque nao encontrado");
           setEan('');
           setGp('');
           setPreco(null);
@@ -213,7 +213,7 @@ export default function HomePage() {
       setDesc(descricao);
     } catch (error) {
       console.error(
-        "[handleSearchCNPJ] Erro ao buscar descrição do CNPJ:",
+        "[handleSearchCNPJ] Erro ao buscar descricao do CNPJ:",
         error
       );
       setDesc("");
@@ -236,46 +236,112 @@ export default function HomePage() {
   };
 
   return (
-    <div>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#f8f9fb' }}>
       <Header username={username} onLogout={handleLogout} />
 
-      <div style={{ padding: 24 }}>
-        <BuscaDesc value={cnpj} onChange={setCnpj} onSubmit={handleSearchCNPJ} />
+      <Box
+        sx={{
+          maxWidth: 480,
+          mx: 'auto',
+          px: 2,
+          pt: 3,
+          pb: 4,
+        }}
+      >
+        {/* Search section */}
+        <Box sx={{ mb: 3 }}>
+          <BuscaDesc value={cnpj} onChange={setCnpj} onSubmit={handleSearchCNPJ} />
 
-        {cnpj !== "" &&
-          (desc === "" ? (
-            <Typography variant="subtitle2" sx={{ mb: 2, textAlign: "center" }}>
-              <strong>Usuário sem desconto</strong>
-            </Typography>
-          ) : (
-            <Typography variant="subtitle2" sx={{ mb: 2, textAlign: "center" }}>
-              Desconto: <strong>{validaDesc(desc)}%</strong>
-            </Typography>
-          ))}
+          {cnpj !== "" && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+              {desc === "" ? (
+                <Chip
+                  label="Sem desconto"
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    borderColor: '#e2e8f0',
+                    color: '#94a3b8',
+                    fontWeight: 500,
+                    fontSize: '0.75rem',
+                  }}
+                />
+              ) : (
+                <Chip
+                  label={`Desconto: ${validaDesc(desc)}%`}
+                  size="small"
+                  sx={{
+                    bgcolor: '#fef2f2',
+                    color: '#CB3B31',
+                    fontWeight: 600,
+                    fontSize: '0.75rem',
+                    border: '1px solid #fecaca',
+                  }}
+                />
+              )}
+            </Box>
+          )}
 
-        <CampoDeBuscaGrupo value={gp} onChange={setGp} onSubmit={handleSearch} onActivate={(v) => setIsOn(v)} />
+          <CampoDeBuscaGrupo value={gp} onChange={setGp} onSubmit={handleSearch} onActivate={(v) => setIsOn(v)} />
 
-        <CampoDeBusca value={ean} onChange={setEan} onSubmit={handleSearch} onActivate={(v) => setIsOn(v)} />
+          <CampoDeBusca value={ean} onChange={setEan} onSubmit={handleSearch} onActivate={(v) => setIsOn(v)} />
+        </Box>
 
+        {/* Search result indicator */}
         {submittedEan && (
-          <Typography variant="subtitle2" sx={{ mb: 2, textAlign: "center" }}>
-            Resultado da busca por: <strong>{submittedEan}</strong>
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+            <Chip
+              label={`Busca: ${submittedEan}`}
+              size="small"
+              onDelete={() => {
+                setSubmittedEan("");
+                setPreco(null);
+                setEstoque([]);
+                setCombos([]);
+              }}
+              sx={{
+                bgcolor: '#f1f5f9',
+                color: '#475569',
+                fontWeight: 500,
+                fontSize: '0.75rem',
+                '& .MuiChip-deleteIcon': {
+                  color: '#94a3b8',
+                  fontSize: '1rem',
+                  '&:hover': { color: '#CB3B31' },
+                },
+              }}
+            />
+          </Box>
         )}
 
+        {/* Error message */}
         {msgErro !== "" && (
-          <Typography variant="subtitle1" sx={{ mb: 2, textAlign: "center" }}>
-            <strong>{msgErro}</strong>
-          </Typography>
+          <Box
+            className="fade-in"
+            sx={{
+              bgcolor: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: 3,
+              px: 2.5,
+              py: 1.5,
+              mb: 2,
+              textAlign: 'center',
+            }}
+          >
+            <Typography variant="body2" sx={{ color: '#dc2626', fontWeight: 600 }}>
+              {msgErro}
+            </Typography>
+          </Box>
         )}
 
+        {/* Product results */}
         <TabelaEstoque
           data={estoque}
           preco={preco?.price}
           desconto={validaDesc(desc)}
           combos={combos}
         />
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }

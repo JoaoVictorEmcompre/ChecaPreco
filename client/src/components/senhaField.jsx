@@ -5,17 +5,23 @@ import { useState } from 'react';
 
 const StyledTextField = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
-    borderRadius: theme.spacing(3),
-    backgroundColor: '#f5f5f5',
-    '&:hover': { backgroundColor: '#eeeeee' },
-    '&.Mui-focused': { backgroundColor: '#ffffff' },
+    borderRadius: 14,
+    backgroundColor: '#f8f9fb',
+    border: '1.5px solid #e2e8f0',
+    transition: 'all 0.2s ease',
+    '& fieldset': { border: 'none' },
+    '&:hover': { backgroundColor: '#f1f5f9', borderColor: '#cbd5e1' },
+    '&.Mui-focused': { backgroundColor: '#fff', borderColor: '#CB3B31', boxShadow: '0 0 0 3px rgba(203, 59, 49, 0.1)' },
+  },
+  '& .MuiInputLabel-root': {
+    fontWeight: 500,
+    '&.Mui-focused': { color: '#CB3B31' },
   },
 }));
 
 export default function SenhaField({ value, onChange, error, helperText, disabled }) {
   const [showPassword, setShowPassword] = useState(false);
 
-  // Loga toda vez que o componente renderiza
   console.log('[SenhaField] Render | value:', value, '| error:', error);
 
   return (
@@ -35,7 +41,7 @@ export default function SenhaField({ value, onChange, error, helperText, disable
       InputProps={{
         startAdornment: (
           <InputAdornment position="start">
-            <Lock color="action" />
+            <Lock sx={{ color: '#94a3b8', fontSize: '1.2rem' }} />
           </InputAdornment>
         ),
         endAdornment: (
@@ -47,8 +53,9 @@ export default function SenhaField({ value, onChange, error, helperText, disable
               }}
               edge="end"
               tabIndex={-1}
+              sx={{ color: '#94a3b8' }}
             >
-              {showPassword ? <VisibilityOff /> : <Visibility />}
+              {showPassword ? <VisibilityOff sx={{ fontSize: '1.2rem' }} /> : <Visibility sx={{ fontSize: '1.2rem' }} />}
             </IconButton>
           </InputAdornment>
         ),

@@ -99,16 +99,18 @@ export default function Login() {
             variant="contained"
             disabled={loading}
             sx={{
-              borderRadius: 3,
-              padding: '12px 0',
+              borderRadius: 3.5,
+              padding: '13px 0',
               fontWeight: 600,
-              background: 'linear-gradient(45deg, #CB3B31 30%, #e57373 90%)',
+              fontSize: '0.95rem',
+              background: 'linear-gradient(135deg, #CB3B31 0%, #a52a22 100%)',
+              boxShadow: '0 4px 14px rgba(203, 59, 49, 0.3)',
               '&:hover': {
-                background: 'linear-gradient(45deg, #b71c1c 30%, #CB3B31 90%)',
+                background: 'linear-gradient(135deg, #b71c1c 0%, #8b1a12 100%)',
                 transform: 'translateY(-1px)',
-                boxShadow: '0 4px 20px rgba(203, 59, 49, 0.4)',
+                boxShadow: '0 6px 20px rgba(203, 59, 49, 0.4)',
               },
-              transition: 'all 0.3s ease',
+              transition: 'all 0.2s ease',
             }}
           >
             {loading ? <CircularProgress size={24} color="inherit" /> : 'Entrar'}
