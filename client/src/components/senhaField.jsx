@@ -1,58 +1,58 @@
-import { TextField, InputAdornment, IconButton } from '@mui/material';
-import { Visibility, VisibilityOff, Lock } from '@mui/icons-material';
-import { styled } from '@mui/material/styles';
-import { useState } from 'react';
+import {TextField, InputAdornment, IconButton} from '@mui/material';
+import {Visibility, VisibilityOff, Lock} from '@mui/icons-material';
+import {styled} from '@mui/material/styles';
+import {useState} from 'react';
 
-const StyledTextField = styled(TextField)(({ theme }) => ({
-  '& .MuiOutlinedInput-root': {
-    borderRadius: theme.spacing(3),
-    backgroundColor: '#f5f5f5',
-    '&:hover': { backgroundColor: '#eeeeee' },
-    '&.Mui-focused': { backgroundColor: '#ffffff' },
-  },
+const StyledTextField = styled(TextField)(({theme}) => ({
+    '& .MuiOutlinedInput-root': {
+        borderRadius: theme.spacing(3),
+        backgroundColor: '#f5f5f5',
+        '&:hover': {backgroundColor: '#eeeeee'},
+        '&.Mui-focused': {backgroundColor: '#ffffff'},
+    },
 }));
 
-export default function SenhaField({ value, onChange, error, helperText, disabled }) {
-  const [showPassword, setShowPassword] = useState(false);
+export default function SenhaField({value, onChange, error, helperText, disabled}) {
+    const [showPassword, setShowPassword] = useState(false);
 
-  // Loga toda vez que o componente renderiza
-  console.log('[SenhaField] Render | value:', value, '| error:', error);
+    // Loga toda vez que o componente renderiza
+    console.log('[SenhaField] Render | value:', value, '| error:', error);
 
-  return (
-    <StyledTextField
-      fullWidth
-      label="Senha"
-      type={showPassword ? 'text' : 'password'}
-      value={value}
-      onChange={(e) => {
-        console.log('[SenhaField] Input alterado:', e.target.value);
-        onChange(e);
-      }}
-      error={!!error}
-      helperText={helperText}
-      placeholder="Digite sua senha"
-      disabled={disabled}
-      InputProps={{
-        startAdornment: (
-          <InputAdornment position="start">
-            <Lock color="action" />
-          </InputAdornment>
-        ),
-        endAdornment: (
-          <InputAdornment position="end">
-            <IconButton
-              onClick={() => {
-                setShowPassword(!showPassword);
-                console.log('[SenhaField] Visibilidade da senha:', !showPassword ? 'MOSTRAR' : 'ESCONDER');
-              }}
-              edge="end"
-              tabIndex={-1}
-            >
-              {showPassword ? <VisibilityOff /> : <Visibility />}
-            </IconButton>
-          </InputAdornment>
-        ),
-      }}
-    />
-  );
+    return (
+        <StyledTextField
+            fullWidth
+            label="Senha"
+            type={showPassword ? 'text' : 'password'}
+            value={value}
+            onChange={(e) => {
+                console.log('[SenhaField] Input alterado:', e.target.value);
+                onChange(e);
+            }}
+            error={!!error}
+            helperText={helperText}
+            placeholder="Digite sua senha"
+            disabled={disabled}
+            InputProps={{
+                startAdornment: (
+                    <InputAdornment position="start">
+                        <Lock color="action"/>
+                    </InputAdornment>
+                ),
+                endAdornment: (
+                    <InputAdornment position="end">
+                        <IconButton
+                            onClick={() => {
+                                setShowPassword(!showPassword);
+                                console.log('[SenhaField] Visibilidade da senha:', !showPassword ? 'MOSTRAR' : 'ESCONDER');
+                            }}
+                            edge="end"
+                            tabIndex={-1}
+                        >
+                            {showPassword ? <VisibilityOff/> : <Visibility/>}
+                        </IconButton>
+                    </InputAdornment>
+                ),
+            }}
+        />
+    );
 }

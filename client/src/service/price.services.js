@@ -1,13 +1,13 @@
 import axios from 'axios';
-import { getToken } from './token';
+import {getToken} from './token';
 
 export const getPrecoPorGrupo = async (groupCode) => {
-  const token = getToken();
+    const token = getToken();
 
-  const response = await axios.post(`/api/preco`, {
-    groupCode,
-    token,
-  });
+    const response = await axios.post(`/api/preco`, {
+        groupCode,
+        token,
+    });
 
-  return response.data;
+    return response.data;
 };

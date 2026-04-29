@@ -3,35 +3,26 @@ const axios = require('axios');
 const router = express.Router();
 
 router.get('/', async (req, res) => {
-    const { codigo } = req.query;
-
-    console.log(`📥 [CNPJ] Requisição recebida com query:`, req.query);
+    const {codigo} = req.query;
 
     if (!codigo) {
-        console.warn('⚠️ [CNPJ] Parâmetro "codigo" ausente');
-        return res.status(400).json({ error: 'CNPJ é obrigatório.' });
+        return res.status(400).json({error: 'CNPJ é obrigatório.'});
     }
 
     try {
         const url = `http://187.95.116.54:9989/pcp/cnpj/${codigo}`;
-        console.log(`🔍 [CNPJ] Consultando URL externa: ${url}`);
-
         const response = await axios.get(url);
+        const percentual = response.data?.percentual;
 
-        console.log(`✅ [CNPJ] Resposta recebida da API externa:`, response.data);
-
-        const tabDesc = response.data?.tabDesc;
-
-        if (!tabDesc) {
-            console.warn('⚠️ [CNPJ] "tabDesc" não encontrado na resposta');
-            return res.status(404).json({ error: 'Descrição não encontrada para o CNPJ informado.' });
+        if (!percentual) {
+            console.warn('[CNPJ] Percentual não encontrado. código:', codigo);
+            return res.status(404).json({error: 'Descrição não encontrada para o CNPJ informado.'});
         }
 
-        console.log('✅ [CNPJ] Retornando descrição para o cliente');
-        res.json({ tabDesc });
+        res.json({percentual});
     } catch (err) {
-        console.error('❌ [CNPJ] Erro ao consultar CNPJ:', err.response?.data || err.message);
-        res.status(err.response?.status || 500).json({ error: 'Erro ao consultar CNPJ' });
+        console.error('[CNPJ] Erro ao consultar. código:', codigo, '| Erro:', err.response?.data || err.message);
+        res.status(err.response?.status || 500).json({error: 'Erro ao consultar CNPJ'});
     }
 });
 

@@ -1,9 +1,9 @@
 // components/buscaGrupo.jsx
-import { useRef } from "react";
-import { Paper, InputBase, IconButton, Box } from "@mui/material";
+import {useRef} from "react";
+import {Paper, InputBase, IconButton, Box} from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 
-export default function CampoDeBuscaGrupo({ value, onChange, onSubmit, onActivate }) {
+export default function CampoDeBuscaGrupo({value, onChange, onSubmit, onActivate}) {
     const inputRef = useRef(null);
 
     const handleSubmit = (e) => {
@@ -20,7 +20,7 @@ export default function CampoDeBuscaGrupo({ value, onChange, onSubmit, onActivat
     };
 
     return (
-        <Box sx={{ mb: 2, display: "flex", justifyContent: "center" }}>
+        <Box sx={{mb: 2, display: "flex", justifyContent: "center"}}>
             <Paper
                 component="form"
                 sx={{
@@ -35,15 +35,15 @@ export default function CampoDeBuscaGrupo({ value, onChange, onSubmit, onActivat
             >
                 <InputBase
                     inputRef={inputRef}
-                    sx={{ ml: 1, flex: 1, fontSize: 14 }}
+                    sx={{ml: 1, flex: 1, fontSize: 14}}
                     placeholder="Digite o código do grupo"
-                    inputProps={{ "aria-label": "campo de busca por grupo" }}
+                    inputProps={{"aria-label": "campo de busca por grupo"}}
                     value={value}
                     onFocus={handleFocus}
                     onChange={handleChange}
                 />
-                <IconButton type="submit" sx={{ p: "10px" }} aria-label="Buscar por grupo">
-                    <SearchIcon />
+                <IconButton type="submit" sx={{p: "10px"}} aria-label="Buscar por grupo">
+                    <SearchIcon/>
                 </IconButton>
             </Paper>
         </Box>
