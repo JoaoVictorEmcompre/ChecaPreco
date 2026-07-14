@@ -249,7 +249,6 @@ cd /var/www/teste/ChecaPreco/client
 npm install
 npm run build
 ```
-> O `npm install` aqui não estava no passo a passo original, mas é importante incluir: o `package.json`/`package-lock.json` do `client` mudou recentemente (removemos `@sentry/react`, `html5-qrcode`, `vite-plugin-mkcert`, adicionamos `@zxing/library`). Sem reinstalar, o build pode usar dependências desatualizadas ou faltando.
 
 **3. Publica o frontend (substitui os arquivos estáticos servidos)**
 ```bash
@@ -269,8 +268,6 @@ cd /root/minha-aplicacao/public
 npm install
 pm2 restart checapreco-back
 ```
-
-> Usei caminhos absolutos em vez de `cd`s encadeados (como no passo a passo original, que dependia do diretório em que você ainda estava do passo anterior) — assim cada bloco funciona sozinho, mesmo que você rode fora de ordem ou depois de sair/voltar da SSH.
 
 ### Cuidados importantes (ler antes de rodar)
 
