@@ -12,18 +12,12 @@ const StyledTextField = styled(TextField)(({theme}) => ({
 }));
 
 export default function UsuarioField({value, onChange, error, helperText, disabled}) {
-    // Loga toda vez que o campo renderiza e mostra os principais props
-    console.log('[UsuarioField] Render | value:', value, '| error:', error, '| disabled:', disabled);
-
     return (
         <StyledTextField
             fullWidth
             label="Usuário"
             value={value}
-            onChange={e => {
-                console.log('[UsuarioField] Input alterado:', e.target.value);
-                onChange(e);
-            }}
+            onChange={onChange}
             error={!!error}
             helperText={helperText}
             placeholder="Digite seu usuário"

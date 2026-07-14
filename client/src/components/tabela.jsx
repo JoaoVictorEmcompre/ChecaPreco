@@ -1,3 +1,4 @@
+import {useMemo, useState, useRef, useEffect} from 'react';
 import {styled} from '@mui/material/styles';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -8,6 +9,13 @@ import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import Chip from '@mui/material/Chip';
+import IconButton from '@mui/material/IconButton';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import CloseIcon from '@mui/icons-material/Close';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
 const StyledTableCell = styled(TableCell)(({theme}) => ({
     [`&.${tableCellClasses.head}`]: {
@@ -96,6 +104,87 @@ function formatarNomeProduto(productName, grupo, tipoVariacao) {
     return nome;
 }
 
+function normalizarNumero(valor) {
+    const numero = Number(valor);
+    return Number.isFinite(numero) ? numero : 0;
+}
+
+function calcularPrecoFinal({preco, desconto, promocao}) {
+    const precoNormal = normalizarNumero(preco);
+    const percentualDesconto = normalizarNumero(desconto);
+
+    const vlPromocao = normalizarNumero(promocao?.vlPromocao);
+    const vlAnterior = normalizarNumero(promocao?.vlAnterior);
+
+    const temPromocao =
+        promocao &&
+        vlPromocao > 0 &&
+        vlAnterior > 0 &&
+        vlPromocao < vlAnterior;
+
+    const temDescontoCnpj = percentualDesconto > 0;
+
+    if (!precoNormal && !temPromocao) {
+        return {
+            labelsDe: [],
+            precoPor: 0,
+            temPromocao: false,
+            temDescontoCnpj,
+        };
+    }
+
+    if (temPromocao && temDescontoCnpj) {
+        const precoFinal = vlPromocao * (1 - percentualDesconto / 100);
+
+        return {
+            labelsDe: [
+                {label: 'De', valor: vlAnterior},
+                {label: 'Promoção', valor: vlPromocao},
+            ],
+            precoPor: Number(precoFinal.toFixed(2)),
+            temPromocao: true,
+            temDescontoCnpj: true,
+        };
+    }
+
+    if (temPromocao) {
+        return {
+            labelsDe: [
+                {label: 'De', valor: vlAnterior},
+            ],
+            precoPor: vlPromocao,
+            temPromocao: true,
+            temDescontoCnpj: false,
+        };
+    }
+
+    if (temDescontoCnpj) {
+        const precoFinal = precoNormal * (1 - percentualDesconto / 100);
+
+        return {
+            labelsDe: [
+                {label: 'De', valor: precoNormal},
+            ],
+            precoPor: Number(precoFinal.toFixed(2)),
+            temPromocao: false,
+            temDescontoCnpj: true,
+        };
+    }
+
+    return {
+        labelsDe: [],
+        precoPor: precoNormal,
+        temPromocao: false,
+        temDescontoCnpj: false,
+    };
+}
+
+function precoComPercentual(valor, percentual) {
+    if (typeof valor !== 'number' || typeof percentual !== 'number') return '';
+    const fator = 1 - (percentual / 100);
+    return valor * fator;
+}
+
 function TabelaMatriz({grupo}) {
     const cores = [...new Set(grupo.map(i => i.colorName))];
     const tamanhos = [...new Set(grupo.map(i => i.sizeName))].sort((a, b) => parseInt(a) - parseInt(b));
@@ -105,8 +194,6 @@ function TabelaMatriz({grupo}) {
         const qtd = i.balances?.[0]?.stock ?? 0;
         estoqueMap[key] = (estoqueMap[key] || 0) + qtd;
     });
-
-    console.log('[TabelaEstoque] Renderizando TabelaMatriz | cores:', cores, '| tamanhos:', tamanhos, '| estoqueMap:', estoqueMap);
 
     return (
         <Box sx={{position: 'relative'}}>
@@ -145,7 +232,6 @@ function TabelaMatriz({grupo}) {
 }
 
 function TabelaPorTamanho({grupo}) {
-    console.log('[TabelaEstoque] Renderizando TabelaPorTamanho | grupo:', grupo);
     return (
         <TableContainer component={Paper} sx={{mb: 4}}>
             <Table>
@@ -156,10 +242,10 @@ function TabelaPorTamanho({grupo}) {
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {grupo.map((item, idx) => {
+                    {grupo.map((item) => {
                         const estoque = item.balances?.[0]?.stock ?? 0;
                         return (
-                            <StyledTableRow key={idx}>
+                            <StyledTableRow key={`${item.referenceCode}-${item.colorName}-${item.sizeName}`}>
                                 <StyledTableCell>{item.sizeName}</StyledTableCell>
                                 <StyledTableCell align="center" sx={{
                                     color: estoque <= 0 ? '#CB3B31' : 'inherit',
@@ -178,7 +264,6 @@ function TabelaPorTamanho({grupo}) {
 }
 
 function TabelaPorCor({grupo}) {
-    console.log('[TabelaEstoque] Renderizando TabelaPorCor | grupo:', grupo);
     return (
         <TableContainer component={Paper} sx={{mb: 4}}>
             <Table>
@@ -189,10 +274,10 @@ function TabelaPorCor({grupo}) {
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {grupo.map((item, idx) => {
+                    {grupo.map((item) => {
                         const estoque = item.balances?.[0]?.stock ?? 0;
                         return (
-                            <StyledTableRow key={idx}>
+                            <StyledTableRow key={`${item.referenceCode}-${item.colorName}-${item.sizeName}`}>
                                 <StyledTableCell>{item.colorName}</StyledTableCell>
                                 <StyledTableCell align="center" sx={{
                                     color: estoque <= 0 ? '#CB3B31' : 'inherit',
@@ -226,189 +311,242 @@ function calcularEstoqueTotal(grupo) {
     }, 0);
 }
 
-export default function TabelaEstoque({data, preco, desconto = 0, combos = [], promocao = null, cod}) {
-    console.log('[TabelaEstoque] Render | props:', {data, preco, desconto, combos, promocao, cod});
-    const agrupado = agruparPorReferencia(data);
+function formatarData(iso) {
+    if (!iso) return '-';
+    const data = new Date(iso);
+    return isNaN(data.getTime()) ? '-' : data.toLocaleDateString('pt-BR');
+}
 
-    const normalizarNumero = (valor) => {
-        const numero = Number(valor);
-        return Number.isFinite(numero) ? numero : 0;
+function PedidosCompraDialog({open, onClose, pedidos, tipo}) {
+    const mostrarCor = tipo === 'VAR_COR' || tipo === 'VAR_AMBOS';
+    const mostrarTamanho = tipo === 'VAR_TAMANHO' || tipo === 'VAR_AMBOS';
+
+    const containerRef = useRef(null);
+    const [temMaisAbaixo, setTemMaisAbaixo] = useState(false);
+
+    const verificarScroll = () => {
+        const el = containerRef.current;
+        if (!el) return;
+        const folga = 4;
+        setTemMaisAbaixo(el.scrollHeight - el.scrollTop - el.clientHeight > folga);
     };
 
-    const calcularPrecoFinal = ({preco, desconto, promocao}) => {
-        const precoNormal = normalizarNumero(preco);
-        const percentualDesconto = normalizarNumero(desconto);
+    useEffect(() => {
+        if (!open) return;
+        const id = requestAnimationFrame(verificarScroll);
+        return () => cancelAnimationFrame(id);
+    }, [open, pedidos]);
 
-        const vlPromocao = normalizarNumero(promocao?.vlPromocao);
-        const vlAnterior = normalizarNumero(promocao?.vlAnterior);
+    return (
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="md"
+            fullWidth
+            slotProps={{
+                backdrop: {sx: {backgroundColor: 'rgba(0, 0, 0, 0.8)'}},
+                paper: {sx: {m: 1, width: 'calc(100% - 16px)'}},
+            }}
+        >
+            <DialogContent sx={{position: 'relative', pt: 5, pb: 2, overflowY: 'visible'}}>
+                <IconButton
+                    onClick={onClose}
+                    aria-label="Fechar"
+                    sx={{position: 'absolute', top: 8, right: 8}}
+                >
+                    <CloseIcon/>
+                </IconButton>
 
-        const temPromocao =
-            promocao &&
-            vlPromocao > 0 &&
-            vlAnterior > 0 &&
-            vlPromocao < vlAnterior;
+                <Typography variant="h6" sx={{mb: 1.5, fontWeight: 600, color: '#333'}}>
+                    Pedidos de compra em andamento
+                </Typography>
 
-        const temDescontoCnpj = percentualDesconto > 0;
+                <Box sx={{position: 'relative'}}>
+                    <TableContainer
+                        ref={containerRef}
+                        onScroll={verificarScroll}
+                        sx={{maxHeight: {xs: '70vh', sm: '60vh'}, overflowY: 'auto'}}
+                    >
+                        <Table size="small" stickyHeader>
+                            <TableHead>
+                                <TableRow>
+                                    {mostrarCor && <StyledTableCell>Cor</StyledTableCell>}
+                                    {mostrarTamanho && <StyledTableCell>Tamanho</StyledTableCell>}
+                                    <StyledTableCell align="center">Qtd.</StyledTableCell>
+                                    <StyledTableCell>Previsão</StyledTableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {pedidos.map((p) => (
+                                    <StyledTableRow key={`${p.orderCode}-${p.productCode}-${p.colorName}-${p.sizeName}`}>
+                                        {mostrarCor && <StyledTableCell>{p.colorName}</StyledTableCell>}
+                                        {mostrarTamanho && <StyledTableCell>{p.sizeName}</StyledTableCell>}
+                                        <StyledTableCell align="center">{p.quantity}</StyledTableCell>
+                                        <StyledTableCell>{formatarData(p.deliveryForecastDate)}</StyledTableCell>
+                                    </StyledTableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
 
-        if (!precoNormal && !temPromocao) {
-            return {
-                labelsDe: [],
-                precoPor: 0,
-                temPromocao: false,
-                temDescontoCnpj,
-            };
-        }
+                    {temMaisAbaixo && (
+                        <Box
+                            sx={{
+                                position: 'absolute',
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                height: 40,
+                                pointerEvents: 'none',
+                                display: 'flex',
+                                alignItems: 'flex-end',
+                                justifyContent: 'center',
+                                pb: 0.5,
+                                background: 'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.95) 65%)',
+                            }}
+                        >
+                            <KeyboardArrowDownIcon sx={{color: '#CB3B31'}}/>
+                        </Box>
+                    )}
+                </Box>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
-        if (temPromocao && temDescontoCnpj) {
-            const precoFinal = vlPromocao * (1 - percentualDesconto / 100);
+export default function TabelaEstoque({data, preco, desconto = 0, combos = [], promocao = null, pedidosCompra = [], cod}) {
+    const [pedidoAberto, setPedidoAberto] = useState(null);
 
-            return {
-                labelsDe: [
-                    {label: 'De', valor: vlAnterior},
-                    {label: 'Promoção', valor: vlPromocao},
-                ],
-                precoPor: Number(precoFinal.toFixed(2)),
-                temPromocao: true,
-                temDescontoCnpj: true,
-            };
-        }
+    const grupos = useMemo(() => {
+        const agrupado = agruparPorReferencia(data);
+        return Object.entries(agrupado).map(([ref, grupo]) => {
+            const tipo = identificarTipoGrupo(grupo);
+            const nomeBase = formatarNomeProduto(grupo[0].productName, grupo, tipo);
+            const skusGrupo = new Set(grupo.map(i => String(i.productCode)));
+            const pedidosGrupo = pedidosCompra.filter(p => skusGrupo.has(String(p.productCode)));
+            return {ref, grupo, tipo, nomeBase, pedidosGrupo};
+        });
+    }, [data, pedidosCompra]);
 
-        if (temPromocao) {
-            return {
-                labelsDe: [
-                    {label: 'De', valor: vlAnterior},
-                ],
-                precoPor: vlPromocao,
-                temPromocao: true,
-                temDescontoCnpj: false,
-            };
-        }
-
-        if (temDescontoCnpj) {
-            const precoFinal = precoNormal * (1 - percentualDesconto / 100);
-
-            return {
-                labelsDe: [
-                    {label: 'De', valor: precoNormal},
-                ],
-                precoPor: Number(precoFinal.toFixed(2)),
-                temPromocao: false,
-                temDescontoCnpj: true,
-            };
-        }
-
-        return {
-            labelsDe: [],
-            precoPor: precoNormal,
-            temPromocao: false,
-            temDescontoCnpj: false,
-        };
-    };
-
-    const precoComPercentual = (valor, percentual) => {
-        if (typeof valor !== 'number' || typeof percentual !== 'number') return '';
-        const fator = 1 - (percentual / 100);
-        return valor * fator;
-    };
+    const precoFinal = useMemo(
+        () => calcularPrecoFinal({preco, desconto, promocao}),
+        [preco, desconto, promocao]
+    );
 
     return (
         <>
-            {Object.entries(agrupado).map(([ref, grupo]) => {
-                const tipo = identificarTipoGrupo(grupo);
-                const nomeBase = formatarNomeProduto(grupo[0].productName, grupo, tipo);
-                const precoFinal = calcularPrecoFinal({ preco, desconto, promocao });
+            {grupos.map(({ref, grupo, tipo, nomeBase, pedidosGrupo}) => (
+                <div key={ref}>
 
-                console.log('[TabelaEstoque] Grupo ref:', ref, '| tipo:', tipo, '| nomeBase:', nomeBase, '| grupo:', grupo);
-
-                return (
-                    <div key={ref}>
-
-                        {desconto > 0 && (
-                            <Typography variant="h1"
-                                        sx={{mb: 1, mp: 2, fontSize: '18px', fontWeight: 300, color: '#333'}}>
-                                Desconto CNPJ: {desconto}%
-                            </Typography>
-                        )}
-
-                        <Typography variant="h1" sx={{mb: 1, mp: 2, fontSize: '18px', fontWeight: 300, color: '#333'}}>
-                            Código: {cod}
-                        </Typography>
-
-                        <Typography variant="h1" sx={{mb: 1, color: '#333', fontSize: '28px', fontWeight: 400}}>
-                            {nomeBase}
-                        </Typography>
-
-                        {precoFinal.labelsDe.map((item, index) => (
-                            <Typography
-                                key={index}
-                                variant="body2"
+                    {pedidosGrupo.length > 0 && (
+                        <>
+                            <Chip
+                                icon={<LocalShippingIcon sx={{color: 'white !important'}}/>}
+                                label="Pedido"
+                                onClick={() => setPedidoAberto(ref)}
                                 sx={{
-                                    color: '#888',
-                                    textDecoration: 'line-through',
-                                    mb: index === precoFinal.labelsDe.length - 1 ? -1 : 0,
-                                    fontSize: '19px',
-                                    fontWeight: 400,
+                                    mb: 1,
+                                    backgroundColor: '#2e7d32',
+                                    color: 'white',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
                                 }}
-                            >
-                                {item.label}: {formataPreco(item.valor)}
-                            </Typography>
-                        ))}
+                                title="Pedido de compra em andamento para este produto"
+                            />
+                            <PedidosCompraDialog
+                                open={pedidoAberto === ref}
+                                onClose={() => setPedidoAberto(null)}
+                                pedidos={pedidosGrupo}
+                                tipo={tipo}
+                            />
+                        </>
+                    )}
 
-                        <Typography variant="h1" sx={{ mb: 2, color: '#333', fontSize: '30px', fontWeight: 400 }}>
-                            {precoFinal.temDescontoCnpj ? 'Para você:' : 'Preço:'} {formataPreco(precoFinal.precoPor)}
+                    {desconto > 0 && (
+                        <Typography variant="h1"
+                                    sx={{mb: 1, mp: 2, fontSize: '18px', fontWeight: 300, color: '#333'}}>
+                            Desconto CNPJ: {desconto}%
                         </Typography>
+                    )}
 
-                        {Array.isArray(combos) && combos.length > 0 && (
-                            <Box sx={{mb: 2}}>
-                                {combos.map((c, idx) => {
-                                    const valor = formataPreco(
-                                        precoComPercentual(precoFinal.precoPor, c.percentual)
-                                    );
+                    <Typography variant="h1" sx={{mb: 1, mp: 2, fontSize: '18px', fontWeight: 300, color: '#333'}}>
+                        Código: {cod}
+                    </Typography>
 
-                                    return (
-                                        <Box
-                                            key={idx}
-                                            sx={{
-                                                display: "flex",
-                                                justifyContent: "space-between",
-                                                alignItems: "center",
-                                                gap: 3,
-                                            }}
-                                        >
-                                            <Typography variant="h3" sx={{mb: 0, fontWeight: 400, fontSize: '20px'}}>
-                                                Leve {c.quantidade} unidades ou mais e pague:
-                                            </Typography>
+                    <Typography variant="h1" sx={{mb: 1, color: '#333', fontSize: '28px', fontWeight: 400}}>
+                        {nomeBase}
+                    </Typography>
 
-                                            <Typography variant="h3" sx={{
-                                                mb: 0,
-                                                fontWeight: 400,
-                                                fontSize: '28px',
-                                                whiteSpace: "nowrap",
-                                                mr: 5.6
-                                            }}>
-                                                {valor}
-                                            </Typography>
-                                        </Box>
-                                    );
-                                })}
-                            </Box>
-                        )}
-
-                        <Typography variant="h2" sx={{mb: 1, color: '#333', fontSize: '22px', fontWeight: 400}}>
-                            Quantidade Estoque: {calcularEstoqueTotal(grupo)}
+                    {precoFinal.labelsDe.map((item, idx) => (
+                        <Typography
+                            key={item.label}
+                            variant="body2"
+                            sx={{
+                                color: '#888',
+                                textDecoration: 'line-through',
+                                mb: idx === precoFinal.labelsDe.length - 1 ? -1 : 0,
+                                fontSize: '19px',
+                                fontWeight: 400,
+                            }}
+                        >
+                            {item.label}: {formataPreco(item.valor)}
                         </Typography>
+                    ))}
 
-                        {tipo === "VAR_TAMANHO" && <TabelaPorTamanho grupo={grupo}/>}
-                        {tipo === "VAR_COR" && <TabelaPorCor grupo={grupo}/>}
-                        {tipo === "VAR_AMBOS" && <TabelaMatriz grupo={grupo}/>}
-                        {tipo === "FIXO" && (
-                            <Typography variant="h3" sx={{mb: 1, color: '#333', fontSize: '18px', fontWeight: 400}}>
-                                Sem variação.
-                            </Typography>
-                        )}
-                    </div>
-                );
-            })}
+                    <Typography variant="h1" sx={{ mb: 2, color: '#333', fontSize: '30px', fontWeight: 400 }}>
+                        {precoFinal.temDescontoCnpj ? 'Para você:' : 'Preço:'} {formataPreco(precoFinal.precoPor)}
+                    </Typography>
+
+                    {Array.isArray(combos) && combos.length > 0 && (
+                        <Box sx={{mb: 2}}>
+                            {combos.map((c) => {
+                                const valor = formataPreco(
+                                    precoComPercentual(precoFinal.precoPor, c.percentual)
+                                );
+
+                                return (
+                                    <Box
+                                        key={c.quantidade}
+                                        sx={{
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                            gap: 3,
+                                        }}
+                                    >
+                                        <Typography variant="h3" sx={{mb: 0, fontWeight: 400, fontSize: '20px'}}>
+                                            Leve {c.quantidade} unidades ou mais e pague:
+                                        </Typography>
+
+                                        <Typography variant="h3" sx={{
+                                            mb: 0,
+                                            fontWeight: 400,
+                                            fontSize: '28px',
+                                            whiteSpace: "nowrap",
+                                            mr: 5.6
+                                        }}>
+                                            {valor}
+                                        </Typography>
+                                    </Box>
+                                );
+                            })}
+                        </Box>
+                    )}
+
+                    <Typography variant="h2" sx={{mb: 1, color: '#333', fontSize: '22px', fontWeight: 400}}>
+                        Quantidade Estoque: {calcularEstoqueTotal(grupo)}
+                    </Typography>
+
+                    {tipo === "VAR_TAMANHO" && <TabelaPorTamanho grupo={grupo}/>}
+                    {tipo === "VAR_COR" && <TabelaPorCor grupo={grupo}/>}
+                    {tipo === "VAR_AMBOS" && <TabelaMatriz grupo={grupo}/>}
+                    {tipo === "FIXO" && (
+                        <Typography variant="h3" sx={{mb: 1, color: '#333', fontSize: '18px', fontWeight: 400}}>
+                            Sem variação.
+                        </Typography>
+                    )}
+                </div>
+            ))}
         </>
     );
 }

@@ -1,51 +1,28 @@
 // components/buscaGrupo.jsx
-import {useRef} from "react";
-import {Paper, InputBase, IconButton, Box} from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
+import CampoBuscaBase from "./campoBuscaBase";
 
 export default function CampoDeBuscaGrupo({value, onChange, onSubmit, onActivate}) {
-    const inputRef = useRef(null);
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
+    const handleSubmit = (v) => {
         onActivate?.(true);
-        onSubmit(value);
+        onSubmit(v);
     };
 
     const handleFocus = () => onActivate?.(true);
 
-    const handleChange = (e) => {
+    const handleChange = (v) => {
         onActivate?.(true);
-        onChange(e.target.value);
+        onChange(v);
     };
 
     return (
-        <Box sx={{mb: 2, display: "flex", justifyContent: "center"}}>
-            <Paper
-                component="form"
-                sx={{
-                    p: "2px 8px",
-                    display: "flex",
-                    alignItems: "center",
-                    width: 360,
-                    borderRadius: 6,
-                    backgroundColor: "#f1f5f9",
-                }}
-                onSubmit={handleSubmit}
-            >
-                <InputBase
-                    inputRef={inputRef}
-                    sx={{ml: 1, flex: 1, fontSize: 14}}
-                    placeholder="Digite o código do grupo"
-                    inputProps={{"aria-label": "campo de busca por grupo"}}
-                    value={value}
-                    onFocus={handleFocus}
-                    onChange={handleChange}
-                />
-                <IconButton type="submit" sx={{p: "10px"}} aria-label="Buscar por grupo">
-                    <SearchIcon/>
-                </IconButton>
-            </Paper>
-        </Box>
+        <CampoBuscaBase
+            value={value}
+            onChange={handleChange}
+            onSubmit={handleSubmit}
+            onFocus={handleFocus}
+            placeholder="Digite o código do grupo"
+            inputAriaLabel="campo de busca por grupo"
+            submitAriaLabel="Buscar por grupo"
+        />
     );
 }

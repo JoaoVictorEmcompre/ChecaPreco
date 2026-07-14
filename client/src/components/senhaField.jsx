@@ -15,19 +15,13 @@ const StyledTextField = styled(TextField)(({theme}) => ({
 export default function SenhaField({value, onChange, error, helperText, disabled}) {
     const [showPassword, setShowPassword] = useState(false);
 
-    // Loga toda vez que o componente renderiza
-    console.log('[SenhaField] Render | value:', value, '| error:', error);
-
     return (
         <StyledTextField
             fullWidth
             label="Senha"
             type={showPassword ? 'text' : 'password'}
             value={value}
-            onChange={(e) => {
-                console.log('[SenhaField] Input alterado:', e.target.value);
-                onChange(e);
-            }}
+            onChange={onChange}
             error={!!error}
             helperText={helperText}
             placeholder="Digite sua senha"
@@ -41,10 +35,7 @@ export default function SenhaField({value, onChange, error, helperText, disabled
                 endAdornment: (
                     <InputAdornment position="end">
                         <IconButton
-                            onClick={() => {
-                                setShowPassword(!showPassword);
-                                console.log('[SenhaField] Visibilidade da senha:', !showPassword ? 'MOSTRAR' : 'ESCONDER');
-                            }}
+                            onClick={() => setShowPassword(!showPassword)}
                             edge="end"
                             tabIndex={-1}
                         >

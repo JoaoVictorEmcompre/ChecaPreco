@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+const {logErroApi} = require('../utils/erroApi');
 const router = express.Router();
 
 router.post('/', async (req, res) => {
@@ -34,14 +35,17 @@ router.post('/', async (req, res) => {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
+                timeout: 5000,
             }
         );
         res.json(response.data.items || []);
     } catch (err) {
-        const status = err.response?.status || 500;
-        const errorData = err.response?.data || err.message;
-        console.error('[ESTOQUE] Erro ao consultar. referenceCode:', referenceCode, '| Erro:', errorData);
-        res.status(status).json({error: 'Erro ao consultar estoque', details: errorData});
+        const {status, tipo, descricao} = logErroApi('ESTOQUE', {
+            url: 'product/v2/balances/search',
+            err,
+            contexto: `referenceCode=${referenceCode}`,
+        });
+        res.status(status).json({error: 'Erro ao consultar estoque', tipo, detalhe: descricao});
     }
 });
 

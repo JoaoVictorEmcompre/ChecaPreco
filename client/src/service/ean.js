@@ -13,7 +13,7 @@ export const getSku = async (ean) => {
         });
 
         return response.data.sku;
-    } catch (error) {
+    } catch {
         return null;
     }
 };

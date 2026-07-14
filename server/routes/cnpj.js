@@ -1,6 +1,9 @@
 const express = require('express');
 const axios = require('axios');
+const {logErroApi} = require('../utils/erroApi');
 const router = express.Router();
+
+const PCP_BASE_URL = process.env.PCP_BASE_URL || 'http://187.95.116.54:9989';
 
 router.get('/', async (req, res) => {
     const {codigo} = req.query;
@@ -9,9 +12,10 @@ router.get('/', async (req, res) => {
         return res.status(400).json({error: 'CNPJ é obrigatório.'});
     }
 
+    const url = `${PCP_BASE_URL}/pcp/cnpj/${codigo}`;
+
     try {
-        const url = `http://187.95.116.54:9989/pcp/cnpj/${codigo}`;
-        const response = await axios.get(url);
+        const response = await axios.get(url, {timeout: 5000});
         const percentual = response.data?.percentual;
 
         if (!percentual) {
@@ -21,8 +25,12 @@ router.get('/', async (req, res) => {
 
         res.json({percentual});
     } catch (err) {
-        console.error('[CNPJ] Erro ao consultar. código:', codigo, '| Erro:', err.response?.data || err.message);
-        res.status(err.response?.status || 500).json({error: 'Erro ao consultar CNPJ'});
+        const {status, tipo, descricao} = logErroApi('CNPJ', {
+            url,
+            err,
+            contexto: `codigo=${codigo}`,
+        });
+        res.status(status).json({error: 'Erro ao consultar CNPJ', tipo, detalhe: descricao});
     }
 });
 

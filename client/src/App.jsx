@@ -5,6 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline'
 import Login from './pages/login'
 import HomePage from './pages/home'
 import {loginAutomatico} from './service/login.services.js'
+import {getToken} from './service/token.js'
 import './App.css'
 
 export default function App() {
@@ -13,7 +14,9 @@ export default function App() {
     useEffect(() => {
         const iniciarLogin = async () => {
             try {
-                await loginAutomatico()
+                if (!getToken()) {
+                    await loginAutomatico()
+                }
             } catch (error) {
                 console.error('Erro ao iniciar login automático:', error)
             } finally {

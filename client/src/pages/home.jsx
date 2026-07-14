@@ -1,22 +1,35 @@
-import React, {useState, useEffect} from "react";
+import {useState} from "react";
 import {Typography} from "@mui/material";
 import CampoDeBusca from "../components/busca";
 import CampoDeBuscaGrupo from "../components/buscaGrupo";
 import TabelaEstoque from "../components/tabela";
 import Header from "../components/header";
-import {useNavigate} from "react-router-dom";
 import {getPrecoPorGrupo} from "../service/price.services";
 import {getEstoque} from "../service/stock.services";
 import {getSku} from "../service/ean";
-import {loginAutomatico} from "../service/login.services";
 import BuscaDesc from "../components/buscaDesc";
 import {getDesc} from "../service/cnpj.services";
 import {getCombo} from "../service/combo.services";
 import {getPromocao} from "../service/promocao.services.js";
+import {getPedidosCompra} from "../service/pedidosCompra.services.js";
+
+const resolverCombos = (result, contexto) => {
+    if (result.status === "fulfilled") return result.value;
+    console.error(`[handleSearch][${contexto}] Erro combos:`, result.reason);
+    return [];
+};
+
+const resolverPromocao = (result, contexto) => {
+    if (result.status === "fulfilled") return result.value || null;
+    console.error(`[handleSearch][${contexto}] Erro promoção:`, result.reason);
+    return null;
+};
+
+const skusDoGrupo = (estoqueData) =>
+    [...new Set((estoqueData || []).map(i => i.productCode).filter(Boolean))];
 
 export default function HomePage() {
-    const navigate = useNavigate();
-    const [username, setUsername] = useState("");
+    const [username] = useState(() => sessionStorage.getItem("username") || "");
     const [ean, setEan] = useState("");
     const [gp, setGp] = useState("");
     const [submittedEan, setSubmittedEan] = useState("");
@@ -25,46 +38,24 @@ export default function HomePage() {
     const [combos, setCombos] = useState([]);
     const [cnpj, setCnpj] = useState("");
     const [desc, setDesc] = useState("");
-    const [submittedCnpj, setSubmittedCnpj] = useState("");
     const [msgErro, setMsgErro] = useState("");
     const [isOn, setIsOn] = useState(false);
     const [promocao, setPromocao] = useState(null);
-
-    useEffect(() => {
-        console.log("[useEffect] Verificando username em sessionStorage...");
-        const user = sessionStorage.getItem("username");
-        if (!user) {
-            console.log("[useEffect] Sem usuário logado, executando loginAutomatico");
-            loginAutomatico().then(() => {
-                const usuario = sessionStorage.getItem("username");
-                if (usuario) {
-                    console.log("[useEffect] Login automático realizado:", usuario);
-                    setUsername(usuario);
-                } else {
-                    console.warn("[useEffect] Login automático falhou.");
-                }
-            });
-        } else {
-            console.log("[useEffect] Usuário já logado:", user);
-            setUsername(user);
-        }
-    }, []);
+    const [pedidosCompra, setPedidosCompra] = useState([]);
 
     const isEan = (codigo) => /^\d{13,}$/.test(codigo);
 
-    const buscarPromocao = async (productCode) => {
-        if (!productCode) {
-            setPromocao(null);
+    const buscarPedidosCompra = async (estoqueData, contexto) => {
+        const skus = skusDoGrupo(estoqueData);
+        if (skus.length === 0) {
+            setPedidosCompra([]);
             return;
         }
-
         try {
-            const promocaoData = await getPromocao(productCode);
-            console.log("[buscarPromocao] Promoção retorno:", promocaoData);
-            setPromocao(promocaoData || null);
-        } catch (error) {
-            console.error("[buscarPromocao] Erro ao buscar promoção:", error);
-            setPromocao(null);
+            setPedidosCompra(await getPedidosCompra(skus));
+        } catch (e) {
+            console.error(`[handleSearch][${contexto}] Erro pedidos de compra:`, e);
+            setPedidosCompra([]);
         }
     };
 
@@ -74,8 +65,6 @@ export default function HomePage() {
             : (isOn ? gp : ean);
         const codigo = (raw || "").trim();
 
-        console.log("[handleSearch] Modo:", isOn ? "GRUPO" : "SKU/EAN", " | Código:", codigo);
-
         if (!codigo) {
             if (isOn) setGp("");
             else setEan("");
@@ -84,6 +73,7 @@ export default function HomePage() {
             setEstoque([]);
             setCombos([]);
             setPromocao(null);
+            setPedidosCompra([]);
             setMsgErro("");
             return;
         }
@@ -99,29 +89,32 @@ export default function HomePage() {
                     setPreco(null);
                     setEstoque([]);
                     setPromocao(null);
+                    setPedidosCompra([]);
                     return;
                 }
 
-                const precoData = await getPrecoPorGrupo(sku);
+                const [precoResult, combosResult, promocaoResult] = await Promise.allSettled([
+                    getPrecoPorGrupo(sku),
+                    getCombo(sku),
+                    getPromocao(sku),
+                ]);
+
+                if (precoResult.status === "rejected") throw precoResult.reason;
+                const precoData = precoResult.value;
                 setPreco(precoData);
-                try {
-                    const combosData = await getCombo(sku);
-                    setCombos(combosData);
-                } catch (e) {
-                    console.error("[handleSearch][EAN] Erro combos:", e);
-                    setCombos([]);
-                }
+                setCombos(resolverCombos(combosResult, "EAN"));
+                setPromocao(resolverPromocao(promocaoResult, "EAN"));
 
                 if (!precoData?.referenceCode) {
                     setEstoque([]);
                     setCombos([]);
+                    setPedidosCompra([]);
                     return;
                 }
 
                 const estoqueData = await getEstoque(precoData.referenceCode);
                 setEstoque(estoqueData);
-
-                await buscarPromocao(sku);
+                await buscarPedidosCompra(estoqueData, "EAN");
             } catch (err) {
                 console.error("[handleSearch][EAN] Erro:", err);
                 setMsgErro("Erro ao buscar produto por EAN.");
@@ -129,6 +122,7 @@ export default function HomePage() {
                 setEstoque([]);
                 setCombos([]);
                 setPromocao(null);
+                setPedidosCompra([]);
             }
 
             setEan('');
@@ -138,26 +132,28 @@ export default function HomePage() {
 
         if (!isOn) {
             try {
-                const precoData = await getPrecoPorGrupo(codigo);
+                const [precoResult, combosResult, promocaoResult] = await Promise.allSettled([
+                    getPrecoPorGrupo(codigo),
+                    getCombo(codigo),
+                    getPromocao(codigo),
+                ]);
+
+                if (precoResult.status === "rejected") throw precoResult.reason;
+                const precoData = precoResult.value;
                 setPreco(precoData);
-                try {
-                    const combosData = await getCombo(codigo);
-                    setCombos(combosData);
-                } catch (e) {
-                    console.error("[handleSearch][PADRÃO] Erro combos:", e);
-                    setCombos([]);
-                }
+                setCombos(resolverCombos(combosResult, "PADRÃO"));
+                setPromocao(resolverPromocao(promocaoResult, "PADRÃO"));
 
                 if (!precoData?.referenceCode) {
                     setEstoque([]);
                     setCombos([]);
+                    setPedidosCompra([]);
                     return;
                 }
 
                 const estoqueData = await getEstoque(precoData.referenceCode);
                 setEstoque(estoqueData);
-
-                await buscarPromocao(codigo);
+                await buscarPedidosCompra(estoqueData, "PADRÃO");
             } catch (error) {
                 console.error("[handleSearch][PADRÃO] Erro:", error);
                 setMsgErro("Erro ao buscar produto.");
@@ -165,6 +161,7 @@ export default function HomePage() {
                 setEstoque([]);
                 setCombos([]);
                 setPromocao(null);
+                setPedidosCompra([]);
             }
         } else {
             try {
@@ -183,21 +180,21 @@ export default function HomePage() {
                     setPreco(null);
                     setCombos([]);
                     setPromocao(null);
+                    setPedidosCompra([]);
                     return;
                 }
 
-                const precoData = await getPrecoPorGrupo(productCode);
-                setPreco(precoData);
+                const [precoResult, combosResult, promocaoResult] = await Promise.allSettled([
+                    getPrecoPorGrupo(productCode),
+                    getCombo(productCode),
+                    getPromocao(productCode),
+                ]);
 
-                try {
-                    const combosData = await getCombo(productCode);
-                    setCombos(combosData);
-                } catch (e) {
-                    console.error("[handleSearch][GRUPO] Erro combos:", e);
-                    setCombos([]);
-                }
-
-                await buscarPromocao(productCode);
+                if (precoResult.status === "rejected") throw precoResult.reason;
+                setPreco(precoResult.value);
+                setCombos(resolverCombos(combosResult, "GRUPO"));
+                setPromocao(resolverPromocao(promocaoResult, "GRUPO"));
+                await buscarPedidosCompra(estoqueData, "GRUPO");
             } catch (error) {
                 console.error("[handleSearch][GRUPO] Erro:", error);
                 setMsgErro("Erro ao buscar item pelo grupo.");
@@ -206,6 +203,7 @@ export default function HomePage() {
                 setPreco(null);
                 setEstoque([]);
                 setCombos([]);
+                setPedidosCompra([]);
             }
         }
 
@@ -214,51 +212,33 @@ export default function HomePage() {
     };
 
     const handleSearchCNPJ = async (valor) => {
-        console.log("[handleSearchCNPJ] Valor recebido:", valor);
-
         if (!valor || valor.trim() === "") {
             setCnpj("");
-            setSubmittedCnpj("");
             setDesc("");
-            console.log("[handleSearchCNPJ] Valor vazio, limpando states");
             return;
         }
 
         setCnpj(valor);
-        setSubmittedCnpj(valor);
-        console.log("[handleSearchCNPJ] State CNPJ setado:", valor);
 
         try {
             const descricao = await getDesc(valor);
-            console.log("[handleSearchCNPJ] getDesc retorno:", descricao);
             setDesc(descricao);
         } catch (error) {
-            console.error(
-                "[handleSearchCNPJ] Erro ao buscar descrição do CNPJ:",
-                error
-            );
+            console.error("[handleSearchCNPJ] Erro ao buscar descrição do CNPJ:", error);
             setDesc("");
         }
     };
 
-    const handleLogout = () => {
-        console.log("[handleLogout] Realizando logout e limpando sessionStorage");
-        sessionStorage.removeItem("username");
-        sessionStorage.removeItem("access_token");
-        navigate("/Login");
-    };
-
     const validaDesc = (desc) => {
         if (desc === "1") {
-            console.log("[validaDesc] Corrigindo desconto de 1% para 10%");
-            return (desc = "10");
+            return "10";
         }
         return desc;
     };
 
     return (
         <div>
-            <Header username={username} onLogout={handleLogout}/>
+            <Header username={username}/>
 
             <div style={{padding: 24}}>
                 <BuscaDesc value={cnpj} onChange={setCnpj} onSubmit={handleSearchCNPJ}/>
@@ -279,6 +259,7 @@ export default function HomePage() {
                     desconto={validaDesc(desc)}
                     combos={combos}
                     promocao={promocao}
+                    pedidosCompra={pedidosCompra}
                     cod={submittedEan}
                 />
             </div>

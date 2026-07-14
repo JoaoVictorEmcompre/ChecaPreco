@@ -1,9 +1,8 @@
 const express = require('express');
 const axios = require('axios');
 const https = require('https');
+const {logErroApi} = require('../utils/erroApi');
 const router = express.Router();
-
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 router.get('/', async (req, res) => {
     const {codigo, token} = req.query;
@@ -26,6 +25,7 @@ router.get('/', async (req, res) => {
                 Authorization: `Bearer ${token}`,
                 'Content-Type': 'application/json',
             },
+            timeout: 5000,
         });
 
         const produto = response.data?.items?.[0];
@@ -38,10 +38,12 @@ router.get('/', async (req, res) => {
 
         res.json({sku: cdPrd});
     } catch (err) {
-        const status = err.response?.status || 500;
-        const errorData = err.response?.data || err.message;
-        console.error('[EAN] Erro ao consultar. código:', codigo, '| Erro:', errorData);
-        res.status(status).json({error: 'Erro ao consultar EAN', details: errorData});
+        const {status, tipo, descricao} = logErroApi('EAN', {
+            url: 'product/v2/products',
+            err,
+            contexto: `codigo=${codigo}`,
+        });
+        res.status(status).json({error: 'Erro ao consultar EAN', tipo, detalhe: descricao});
     }
 });
 

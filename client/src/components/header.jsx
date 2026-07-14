@@ -1,10 +1,7 @@
-import {Box, Typography, IconButton} from '@mui/material';
-import LogoutIcon from '@mui/icons-material/Logout';
+import {Box, Typography} from '@mui/material';
 import Logo from '../assets/logo-bf-white.png';
 
-export default function Header({username, onLogout}) {
-    console.log('[Header] Render - username:', username);
-
+export default function Header({username}) {
     return (
         <Box
             sx={{
@@ -21,7 +18,7 @@ export default function Header({username, onLogout}) {
             {/* Esquerda: Nome */}
             <Box sx={{flex: 1}}>
                 <Typography variant="subtitle2">
-                    olá
+                    {username ? `Olá, ${username}` : 'olá'}
                 </Typography>
             </Box>
 
@@ -34,19 +31,6 @@ export default function Header({username, onLogout}) {
                 }}
             >
                 <img src={Logo} alt="Logo" style={{maxHeight: 40}}/>
-            </Box>
-
-            {/* Direita: Botão */}
-            <Box sx={{flex: 1, display: 'flex', justifyContent: 'flex-end'}}>
-                {/* <IconButton
-          onClick={() => {
-            console.log('[Header] Logout clicado');
-            onLogout();
-          }}
-          sx={{ color: 'white' }}
-        >
-          <LogoutIcon />
-        </IconButton> */}
             </Box>
         </Box>
     );

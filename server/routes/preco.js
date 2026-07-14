@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+const {logErroApi} = require('../utils/erroApi');
 const router = express.Router();
 
 router.post('/', async (req, res) => {
@@ -34,6 +35,7 @@ router.post('/', async (req, res) => {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
+                timeout: 5000,
             }
         );
 
@@ -47,10 +49,12 @@ router.post('/', async (req, res) => {
 
         res.json({price: preco, referenceCode});
     } catch (err) {
-        const status = err.response?.status || 500;
-        const errorData = err.response?.data || err.message;
-        console.error('[PREÇO] Erro ao consultar. groupCode:', groupCode, '| Erro:', errorData);
-        res.status(status).json({error: 'Erro ao consultar preço', details: errorData});
+        const {status, tipo, descricao} = logErroApi('PREÇO', {
+            url: 'product/v2/prices/search',
+            err,
+            contexto: `groupCode=${groupCode}`,
+        });
+        res.status(status).json({error: 'Erro ao consultar preço', tipo, detalhe: descricao});
     }
 });
 

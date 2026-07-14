@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+const {logErroApi} = require('../utils/erroApi');
 const router = express.Router();
 
 router.post('/', async (req, res) => {
@@ -20,16 +21,20 @@ router.post('/', async (req, res) => {
     try {
         const response = await axios.post(
             'https://ws.facolchoes.com.br:9443/api/totvsmoda/authorization/v2/token',
-            params
+            params,
+            {timeout: 5000}
         );
         res.json(response.data);
     } catch (err) {
-        const status = err.response?.status || 500;
-        const errorData = err.response?.data || err.message;
-        console.error('[LOGIN] Falha na autenticação. Usuário:', usuario, '| Erro:', errorData);
+        const {status, tipo, descricao} = logErroApi('LOGIN', {
+            url: 'authorization/v2/token',
+            err,
+            contexto: `usuario=${usuario}`,
+        });
         res.status(status).json({
             error: 'Falha ao autenticar usuário',
-            detalhe: errorData,
+            tipo,
+            detalhe: descricao,
         });
     }
 });

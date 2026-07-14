@@ -15,9 +15,6 @@ const StyledPaper = styled(Paper)(({theme}) => ({
 }));
 
 export default function LoginWrapper({children}) {
-    // Loga toda vez que o wrapper renderiza e mostra quantos children ele recebeu
-    console.log('[LoginWrapper] Renderizado | children:', Array.isArray(children) ? children.length : 1);
-
     return (
         <StyledPaper elevation={6}>
             <img

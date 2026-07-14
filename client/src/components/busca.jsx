@@ -1,7 +1,5 @@
 import {useState, useEffect, useRef} from "react";
 import {
-    Paper,
-    InputBase,
     IconButton,
     Box,
     Dialog,
@@ -12,12 +10,12 @@ import {
     Select,
     CircularProgress
 } from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import CloseIcon from "@mui/icons-material/Close";
 import UploadIcon from "@mui/icons-material/Upload";
 import {BrowserMultiFormatReader, BrowserCodeReader} from "@zxing/browser";
 import {DecodeHintType, BarcodeFormat} from "@zxing/library";
+import CampoBuscaBase from "./campoBuscaBase";
 
 export default function CampoDeBusca({value, onChange, onSubmit, onActivate}) {
     const [openScanner, setOpenScanner] = useState(false);
@@ -47,17 +45,16 @@ export default function CampoDeBusca({value, onChange, onSubmit, onActivate}) {
         return all.filter((d) => d.kind === "videoinput");
     };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
+    const handleSubmit = (v) => {
         onActivate?.(false);
-        onSubmit(value);
+        onSubmit(v);
     };
 
     const handleFocus = () => onActivate?.(false);
 
-    const handleChange = (e) => {
+    const handleChange = (v) => {
         onActivate?.(false);
-        onChange(e.target.value);
+        onChange(v);
     };
 
     const stopScanner = async () => {
@@ -313,47 +310,24 @@ export default function CampoDeBusca({value, onChange, onSubmit, onActivate}) {
 
     return (
         <>
-            <Box sx={{mb: 2, display: "flex", justifyContent: "center"}}>
-                <Paper
-                    component="form"
-                    sx={{
-                        p: "2px 8px",
-                        display: "flex",
-                        alignItems: "center",
-                        width: 360,
-                        borderRadius: 6,
-                        backgroundColor: "#f1f5f9",
-                    }}
-                    onSubmit={handleSubmit}
+            <CampoBuscaBase
+                ref={inputRef}
+                value={value}
+                onChange={handleChange}
+                onSubmit={handleSubmit}
+                onFocus={handleFocus}
+                placeholder="Escaneie ou digite o código do item"
+                inputAriaLabel="campo de código de barras"
+                submitAriaLabel="Buscar item pelo código"
+            >
+                <IconButton
+                    sx={{p: "10px"}}
+                    aria-label="Abrir câmera para leitura de código"
+                    onClick={handleOpenScanner}
                 >
-                    <InputBase
-                        inputRef={inputRef}
-                        sx={{ml: 1, flex: 1, fontSize: 14}}
-                        placeholder="Escaneie ou digite o código do item"
-                        inputProps={{"aria-label": "campo de código de barras"}}
-                        value={value}
-                        onFocus={handleFocus}
-                        onChange={handleChange}
-                    />
-
-                    <IconButton
-                        sx={{p: "10px"}}
-                        aria-label="Abrir câmera para leitura de código"
-                        onClick={handleOpenScanner}
-                    >
-                        <CameraAltIcon/>
-                    </IconButton>
-
-
-                    <IconButton
-                        type="submit"
-                        sx={{p: "10px"}}
-                        aria-label="Buscar item pelo código"
-                    >
-                        <SearchIcon/>
-                    </IconButton>
-                </Paper>
-            </Box>
+                    <CameraAltIcon/>
+                </IconButton>
+            </CampoBuscaBase>
 
             <Dialog
                 open={openScanner}

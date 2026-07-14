@@ -1,6 +1,9 @@
 const express = require('express');
 const axios = require('axios');
+const {logErroApi, TIPOS_INDISPONIVEL} = require('../utils/erroApi');
 const router = express.Router();
+
+const PCP_BASE_URL = process.env.PCP_BASE_URL || 'http://187.95.116.54:9989';
 
 router.get('/', async (req, res) => {
     const {sku} = req.query;
@@ -9,7 +12,7 @@ router.get('/', async (req, res) => {
         return res.status(400).json({error: 'SKU é obrigatório.'});
     }
 
-    const url = `http://187.95.116.54:9989/pcp/promocao/${sku}`;
+    const url = `${PCP_BASE_URL}/pcp/promocao/${sku}`;
 
     try {
         const response = await axios.get(url, {timeout: 5000});
@@ -47,18 +50,17 @@ router.get('/', async (req, res) => {
 
         return res.json({promocao});
     } catch (err) {
-        const isTimeout = err.code === 'ECONNABORTED' || /timeout/i.test(err.message);
-        const noResponse = !err.response;
+        const {status, tipo, descricao} = logErroApi('PROMOÇÃO', {
+            url,
+            err,
+            contexto: `sku=${sku}`,
+        });
 
-        if (isTimeout || noResponse) {
-            console.warn('[PROMOÇÃO] Timeout/rede indisponível. sku:', sku);
+        if (TIPOS_INDISPONIVEL.includes(tipo)) {
             return res.json({promocao: null});
         }
 
-        const status = err.response?.status || 500;
-        const errorData = err.response?.data || err.message;
-        console.error('[PROMOÇÃO] Erro ao consultar. sku:', sku, '| Erro:', errorData);
-        return res.status(status).json({error: 'Erro ao consultar promoção', details: errorData});
+        return res.status(status).json({error: 'Erro ao consultar promoção', tipo, detalhe: descricao});
     }
 });
 

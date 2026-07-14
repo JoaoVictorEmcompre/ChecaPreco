@@ -1,6 +1,9 @@
 const express = require('express');
 const axios = require('axios');
+const {logErroApi, TIPOS_INDISPONIVEL} = require('../utils/erroApi');
 const router = express.Router();
+
+const PCP_BASE_URL = process.env.PCP_BASE_URL || 'http://187.95.116.54:9989';
 
 router.get('/', async (req, res) => {
     const {groupCode} = req.query;
@@ -9,7 +12,7 @@ router.get('/', async (req, res) => {
         return res.status(400).json({error: 'groupCode é obrigatório.'});
     }
 
-    const url = `http://187.95.116.54:9989/pcp/combo/${groupCode}`;
+    const url = `${PCP_BASE_URL}/pcp/combo/${groupCode}`;
 
     try {
         const response = await axios.get(url, {timeout: 5000});
@@ -50,16 +53,17 @@ router.get('/', async (req, res) => {
 
         res.json({combos});
     } catch (err) {
-        const isTimeout = err.code === 'ECONNABORTED' || /timeout/i.test(err.message);
-        const noResponse = !err.response;
-        if (isTimeout || noResponse) {
-            console.warn('[COMBO] Timeout/rede indisponível. groupCode:', groupCode);
+        const {status, tipo, descricao} = logErroApi('COMBO', {
+            url,
+            err,
+            contexto: `groupCode=${groupCode}`,
+        });
+
+        if (TIPOS_INDISPONIVEL.includes(tipo)) {
             return res.json({combos: []});
         }
-        const status = err.response?.status || 500;
-        const errorData = err.response?.data || err.message;
-        console.error('[COMBO] Erro ao consultar. groupCode:', groupCode, '| Erro:', errorData);
-        res.status(status).json({error: 'Erro ao consultar combos', details: errorData});
+
+        res.status(status).json({error: 'Erro ao consultar combos', tipo, detalhe: descricao});
     }
 });
 
