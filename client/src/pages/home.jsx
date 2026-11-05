@@ -19,10 +19,15 @@ const resolverCombos = (result, contexto) => {
     return [];
 };
 
-const resolverPromocao = (result, contexto) => {
-    if (result.status === "fulfilled") return result.value || null;
-    console.error(`[handleSearch][${contexto}] Erro promoção:`, result.reason);
-    return null;
+// A promoção é consultada pelo código do grupo (referenceCode). Falha não impede a busca principal.
+const buscarPromocao = async (grupo, contexto) => {
+    if (!grupo) return null;
+    try {
+        return (await getPromocao(grupo)) || null;
+    } catch (e) {
+        console.error(`[handleSearch][${contexto}] Erro promoção:`, e);
+        return null;
+    }
 };
 
 const skusDoGrupo = (estoqueData) =>
@@ -42,6 +47,7 @@ export default function HomePage() {
     const [isOn, setIsOn] = useState(false);
     const [promocao, setPromocao] = useState(null);
     const [pedidosCompra, setPedidosCompra] = useState([]);
+    const [itemBuscado, setItemBuscado] = useState(null);
 
     const isEan = (codigo) => /^\d{13,}$/.test(codigo);
 
@@ -69,6 +75,7 @@ export default function HomePage() {
             if (isOn) setGp("");
             else setEan("");
             setSubmittedEan("");
+            setItemBuscado(null);
             setPreco(null);
             setEstoque([]);
             setCombos([]);
@@ -80,10 +87,13 @@ export default function HomePage() {
 
         setSubmittedEan(codigo);
         setMsgErro("");
+        // Só busca por item (EAN ou código do item) destaca a linha; busca por grupo não
+        setItemBuscado(isEan(codigo) || isOn ? null : codigo);
 
         if (isEan(codigo)) {
             try {
                 const sku = await getSku(codigo);
+                setItemBuscado(sku);
                 if (sku === null) {
                     setMsgErro("Produto não encontrado");
                     setPreco(null);
@@ -93,27 +103,30 @@ export default function HomePage() {
                     return;
                 }
 
-                const [precoResult, combosResult, promocaoResult] = await Promise.allSettled([
+                const [precoResult, combosResult] = await Promise.allSettled([
                     getPrecoPorGrupo(sku),
                     getCombo(sku),
-                    getPromocao(sku),
                 ]);
 
                 if (precoResult.status === "rejected") throw precoResult.reason;
                 const precoData = precoResult.value;
                 setPreco(precoData);
                 setCombos(resolverCombos(combosResult, "EAN"));
-                setPromocao(resolverPromocao(promocaoResult, "EAN"));
 
                 if (!precoData?.referenceCode) {
                     setEstoque([]);
                     setCombos([]);
+                    setPromocao(null);
                     setPedidosCompra([]);
                     return;
                 }
 
-                const estoqueData = await getEstoque(precoData.referenceCode);
+                const [estoqueData, promocaoData] = await Promise.all([
+                    getEstoque(precoData.referenceCode),
+                    buscarPromocao(precoData.referenceCode, "EAN"),
+                ]);
                 setEstoque(estoqueData);
+                setPromocao(promocaoData);
                 await buscarPedidosCompra(estoqueData, "EAN");
             } catch (err) {
                 console.error("[handleSearch][EAN] Erro:", err);
@@ -132,27 +145,30 @@ export default function HomePage() {
 
         if (!isOn) {
             try {
-                const [precoResult, combosResult, promocaoResult] = await Promise.allSettled([
+                const [precoResult, combosResult] = await Promise.allSettled([
                     getPrecoPorGrupo(codigo),
                     getCombo(codigo),
-                    getPromocao(codigo),
                 ]);
 
                 if (precoResult.status === "rejected") throw precoResult.reason;
                 const precoData = precoResult.value;
                 setPreco(precoData);
                 setCombos(resolverCombos(combosResult, "PADRÃO"));
-                setPromocao(resolverPromocao(promocaoResult, "PADRÃO"));
 
                 if (!precoData?.referenceCode) {
                     setEstoque([]);
                     setCombos([]);
+                    setPromocao(null);
                     setPedidosCompra([]);
                     return;
                 }
 
-                const estoqueData = await getEstoque(precoData.referenceCode);
+                const [estoqueData, promocaoData] = await Promise.all([
+                    getEstoque(precoData.referenceCode),
+                    buscarPromocao(precoData.referenceCode, "PADRÃO"),
+                ]);
                 setEstoque(estoqueData);
+                setPromocao(promocaoData);
                 await buscarPedidosCompra(estoqueData, "PADRÃO");
             } catch (error) {
                 console.error("[handleSearch][PADRÃO] Erro:", error);
@@ -184,16 +200,15 @@ export default function HomePage() {
                     return;
                 }
 
-                const [precoResult, combosResult, promocaoResult] = await Promise.allSettled([
-                    getPrecoPorGrupo(productCode),
-                    getCombo(productCode),
-                    getPromocao(productCode),
+                const [[precoResult, combosResult], promocaoData] = await Promise.all([
+                    Promise.allSettled([getPrecoPorGrupo(productCode), getCombo(productCode)]),
+                    buscarPromocao(codigo, "GRUPO"),
                 ]);
 
                 if (precoResult.status === "rejected") throw precoResult.reason;
                 setPreco(precoResult.value);
                 setCombos(resolverCombos(combosResult, "GRUPO"));
-                setPromocao(resolverPromocao(promocaoResult, "GRUPO"));
+                setPromocao(promocaoData);
                 await buscarPedidosCompra(estoqueData, "GRUPO");
             } catch (error) {
                 console.error("[handleSearch][GRUPO] Erro:", error);
@@ -261,6 +276,7 @@ export default function HomePage() {
                     promocao={promocao}
                     pedidosCompra={pedidosCompra}
                     cod={submittedEan}
+                    itemBuscado={itemBuscado}
                 />
             </div>
         </div>

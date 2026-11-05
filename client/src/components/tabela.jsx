@@ -10,6 +10,8 @@ import Paper from '@mui/material/Paper';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
+import Tooltip from '@mui/material/Tooltip';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import IconButton from '@mui/material/IconButton';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
@@ -39,6 +41,26 @@ const StyledTableRow = styled(TableRow)(() => ({
         backgroundColor: '#f5f5f5',
     },
 }));
+
+// Tooltip com o código do produto: só aparece em dispositivos com mouse (desktop)
+function TooltipCodigo({codigo, children}) {
+    const temHover = useMediaQuery('(hover: hover) and (pointer: fine)');
+    if (!temHover || !codigo) return children;
+    return (
+        <Tooltip title={`Código: ${codigo}`} placement="top" followCursor arrow>
+            {children}
+        </Tooltip>
+    );
+}
+
+// Destaque da linha/célula do item buscado (busca por EAN ou por item, nunca por grupo)
+const ehItemBuscado = (codigos, alvo) =>
+    alvo != null && alvo !== '' && [].concat(codigos).some(c => String(c) === String(alvo));
+
+const estiloDestaque = (ativo) => ativo ? {
+    backgroundColor: '#e8f2fd',
+    fontWeight: 600,
+} : {};
 
 function agruparPorReferencia(items) {
     const grupos = {};
@@ -185,14 +207,16 @@ function precoComPercentual(valor, percentual) {
     return valor * fator;
 }
 
-function TabelaMatriz({grupo}) {
+function TabelaMatriz({grupo, itemBuscado}) {
     const cores = [...new Set(grupo.map(i => i.colorName))];
     const tamanhos = [...new Set(grupo.map(i => i.sizeName))].sort((a, b) => parseInt(a) - parseInt(b));
     const estoqueMap = {};
+    const codigoMap = {};
     grupo.forEach(i => {
         const key = `${i.colorName}_${i.sizeName}`;
         const qtd = i.balances?.[0]?.stock ?? 0;
         estoqueMap[key] = (estoqueMap[key] || 0) + qtd;
+        codigoMap[key] = [...(codigoMap[key] || []), i.productCode];
     });
 
     return (
@@ -212,14 +236,18 @@ function TabelaMatriz({grupo}) {
                                 <StyledTableCell>{cor}</StyledTableCell>
                                 {tamanhos.map(t => {
                                     const estoque = estoqueMap[`${cor}_${t}`];
+                                    const destaque = ehItemBuscado(codigoMap[`${cor}_${t}`] || [], itemBuscado);
                                     return (
-                                        <StyledTableCell key={t} align="center" sx={{
-                                            color: estoque <= 0 ? '#CB3B31' : 'inherit',
-                                            backgroundColor: estoque <= 0 ? '#fcf5ca' : 'inherit',
-                                            fontWeight: estoque <= 0 ? 600 : 400,
-                                        }}>
-                                            {estoque ?? "-"}
-                                        </StyledTableCell>
+                                        <TooltipCodigo key={t} codigo={codigoMap[`${cor}_${t}`]?.join(', ')}>
+                                            <StyledTableCell align="center" sx={{
+                                                color: estoque <= 0 ? '#CB3B31' : 'inherit',
+                                                backgroundColor: estoque <= 0 ? '#fcf5ca' : 'inherit',
+                                                fontWeight: estoque <= 0 ? 600 : 400,
+                                                ...estiloDestaque(destaque),
+                                            }}>
+                                                {estoque ?? "-"}
+                                            </StyledTableCell>
+                                        </TooltipCodigo>
                                     );
                                 })}
                             </StyledTableRow>
@@ -231,7 +259,7 @@ function TabelaMatriz({grupo}) {
     );
 }
 
-function TabelaPorTamanho({grupo}) {
+function TabelaPorTamanho({grupo, itemBuscado}) {
     return (
         <TableContainer component={Paper} sx={{mb: 4}}>
             <Table>
@@ -244,17 +272,22 @@ function TabelaPorTamanho({grupo}) {
                 <TableBody>
                     {grupo.map((item) => {
                         const estoque = item.balances?.[0]?.stock ?? 0;
+                        const destaque = ehItemBuscado(item.productCode, itemBuscado);
                         return (
-                            <StyledTableRow key={`${item.referenceCode}-${item.colorName}-${item.sizeName}`}>
-                                <StyledTableCell>{item.sizeName}</StyledTableCell>
-                                <StyledTableCell align="center" sx={{
-                                    color: estoque <= 0 ? '#CB3B31' : 'inherit',
-                                    backgroundColor: estoque <= 0 ? '#fcf5ca' : 'inherit',
-                                    fontWeight: estoque <= 0 ? 600 : 400,
-                                }}>
-                                    {estoque}
-                                </StyledTableCell>
-                            </StyledTableRow>
+                            <TooltipCodigo key={`${item.referenceCode}-${item.colorName}-${item.sizeName}`}
+                                           codigo={item.productCode}>
+                                <StyledTableRow>
+                                    <StyledTableCell sx={estiloDestaque(destaque)}>{item.sizeName}</StyledTableCell>
+                                    <StyledTableCell align="center" sx={{
+                                        color: estoque <= 0 ? '#CB3B31' : 'inherit',
+                                        backgroundColor: estoque <= 0 ? '#fcf5ca' : 'inherit',
+                                        fontWeight: estoque <= 0 ? 600 : 400,
+                                        ...estiloDestaque(destaque),
+                                    }}>
+                                        {estoque}
+                                    </StyledTableCell>
+                                </StyledTableRow>
+                            </TooltipCodigo>
                         );
                     })}
                 </TableBody>
@@ -263,7 +296,7 @@ function TabelaPorTamanho({grupo}) {
     );
 }
 
-function TabelaPorCor({grupo}) {
+function TabelaPorCor({grupo, itemBuscado}) {
     return (
         <TableContainer component={Paper} sx={{mb: 4}}>
             <Table>
@@ -276,17 +309,22 @@ function TabelaPorCor({grupo}) {
                 <TableBody>
                     {grupo.map((item) => {
                         const estoque = item.balances?.[0]?.stock ?? 0;
+                        const destaque = ehItemBuscado(item.productCode, itemBuscado);
                         return (
-                            <StyledTableRow key={`${item.referenceCode}-${item.colorName}-${item.sizeName}`}>
-                                <StyledTableCell>{item.colorName}</StyledTableCell>
-                                <StyledTableCell align="center" sx={{
-                                    color: estoque <= 0 ? '#CB3B31' : 'inherit',
-                                    backgroundColor: estoque <= 0 ? '#fcf5ca' : 'inherit',
-                                    fontWeight: estoque <= 0 ? 600 : 400,
-                                }}>
-                                    {estoque}
-                                </StyledTableCell>
-                            </StyledTableRow>
+                            <TooltipCodigo key={`${item.referenceCode}-${item.colorName}-${item.sizeName}`}
+                                           codigo={item.productCode}>
+                                <StyledTableRow>
+                                    <StyledTableCell sx={estiloDestaque(destaque)}>{item.colorName}</StyledTableCell>
+                                    <StyledTableCell align="center" sx={{
+                                        color: estoque <= 0 ? '#CB3B31' : 'inherit',
+                                        backgroundColor: estoque <= 0 ? '#fcf5ca' : 'inherit',
+                                        fontWeight: estoque <= 0 ? 600 : 400,
+                                        ...estiloDestaque(destaque),
+                                    }}>
+                                        {estoque}
+                                    </StyledTableCell>
+                                </StyledTableRow>
+                            </TooltipCodigo>
                         );
                     })}
                 </TableBody>
@@ -414,7 +452,7 @@ function PedidosCompraDialog({open, onClose, pedidos, tipo}) {
     );
 }
 
-export default function TabelaEstoque({data, preco, desconto = 0, combos = [], promocao = null, pedidosCompra = [], cod}) {
+export default function TabelaEstoque({data, preco, desconto = 0, combos = [], promocao = null, pedidosCompra = [], cod, itemBuscado = null}) {
     const [pedidoAberto, setPedidoAberto] = useState(null);
 
     const grupos = useMemo(() => {
@@ -537,9 +575,9 @@ export default function TabelaEstoque({data, preco, desconto = 0, combos = [], p
                         Quantidade Estoque: {calcularEstoqueTotal(grupo)}
                     </Typography>
 
-                    {tipo === "VAR_TAMANHO" && <TabelaPorTamanho grupo={grupo}/>}
-                    {tipo === "VAR_COR" && <TabelaPorCor grupo={grupo}/>}
-                    {tipo === "VAR_AMBOS" && <TabelaMatriz grupo={grupo}/>}
+                    {tipo === "VAR_TAMANHO" && <TabelaPorTamanho grupo={grupo} itemBuscado={itemBuscado}/>}
+                    {tipo === "VAR_COR" && <TabelaPorCor grupo={grupo} itemBuscado={itemBuscado}/>}
+                    {tipo === "VAR_AMBOS" && <TabelaMatriz grupo={grupo} itemBuscado={itemBuscado}/>}
                     {tipo === "FIXO" && (
                         <Typography variant="h3" sx={{mb: 1, color: '#333', fontSize: '18px', fontWeight: 400}}>
                             Sem variação.

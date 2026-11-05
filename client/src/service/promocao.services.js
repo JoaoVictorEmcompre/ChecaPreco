@@ -1,8 +1,8 @@
 import axios from "axios";
 
-export const getPromocao = async (sku) => {
+export const getPromocao = async (grupo) => {
     const response = await axios.get("/api/promocao", {
-        params: {sku},
+        params: {grupo},
     });
 
     return response.data.promocao;
