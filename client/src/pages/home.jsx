@@ -1,5 +1,5 @@
 import {useState} from "react";
-import {Typography} from "@mui/material";
+import {Alert, Box, LinearProgress, ToggleButton, ToggleButtonGroup} from "@mui/material";
 import CampoDeBusca from "../components/busca";
 import CampoDeBuscaGrupo from "../components/buscaGrupo";
 import TabelaEstoque from "../components/tabela";
@@ -30,6 +30,34 @@ const buscarPromocao = async (grupo, contexto) => {
     }
 };
 
+const seletorModo = {
+    display: "flex",
+    maxWidth: 360,
+    mx: "auto",
+    mb: 1.5,
+    p: "4px",
+    gap: "4px",
+    borderRadius: 999,
+    backgroundColor: "#e9edf2",
+    "& .MuiToggleButtonGroup-grouped": {
+        border: 0,
+        m: 0,
+        borderRadius: "999px !important",
+        py: 0.75,
+        fontSize: 14,
+        fontWeight: 600,
+        textTransform: "none",
+        color: "#667085",
+        transition: "background-color 150ms ease-out, color 150ms ease-out, box-shadow 150ms ease-out",
+        "&:hover": {backgroundColor: "rgba(255,255,255,0.6)"},
+        "&.Mui-selected, &.Mui-selected:hover": {
+            backgroundColor: "#fff",
+            color: "#CB3B31",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+        },
+    },
+};
+
 const skusDoGrupo = (estoqueData) =>
     [...new Set((estoqueData || []).map(i => i.productCode).filter(Boolean))];
 
@@ -44,7 +72,9 @@ export default function HomePage() {
     const [cnpj, setCnpj] = useState("");
     const [desc, setDesc] = useState("");
     const [msgErro, setMsgErro] = useState("");
-    const [isOn, setIsOn] = useState(false);
+    const [carregando, setCarregando] = useState(false);
+    const [modo, setModo] = useState("item");
+    const isOn = modo === "grupo";
     const [promocao, setPromocao] = useState(null);
     const [pedidosCompra, setPedidosCompra] = useState([]);
     const [itemBuscado, setItemBuscado] = useState(null);
@@ -65,7 +95,7 @@ export default function HomePage() {
         }
     };
 
-    const handleSearch = async (incomingCode) => {
+    const executarBusca = async (incomingCode) => {
         const raw = typeof incomingCode === "string" && incomingCode.length > 0
             ? incomingCode
             : (isOn ? gp : ean);
@@ -226,7 +256,18 @@ export default function HomePage() {
         setEan('');
     };
 
-    const handleSearchCNPJ = async (valor) => {
+    // Bloqueia novas ações enquanto uma busca está em andamento
+    const handleSearch = async (incomingCode) => {
+        if (carregando) return;
+        setCarregando(true);
+        try {
+            await executarBusca(incomingCode);
+        } finally {
+            setCarregando(false);
+        }
+    };
+
+    const executarBuscaCNPJ = async (valor) => {
         if (!valor || valor.trim() === "") {
             setCnpj("");
             setDesc("");
@@ -244,6 +285,16 @@ export default function HomePage() {
         }
     };
 
+    const handleSearchCNPJ = async (valor) => {
+        if (carregando) return;
+        setCarregando(true);
+        try {
+            await executarBuscaCNPJ(valor);
+        } finally {
+            setCarregando(false);
+        }
+    };
+
     const validaDesc = (desc) => {
         if (desc === "1") {
             return "10";
@@ -254,20 +305,41 @@ export default function HomePage() {
     return (
         <div>
             <Header username={username}/>
+            {carregando && <LinearProgress sx={{height: 3}}/>}
 
-            <div style={{padding: 24}}>
-                <BuscaDesc value={cnpj} onChange={setCnpj} onSubmit={handleSearchCNPJ}/>
+            <Box sx={{p: {xs: 2, sm: 3}, maxWidth: 960, mx: "auto"}}>
+                <BuscaDesc value={cnpj} onChange={setCnpj} onSubmit={handleSearchCNPJ} disabled={carregando}/>
 
-                <CampoDeBuscaGrupo value={gp} onChange={setGp} onSubmit={handleSearch} onActivate={(v) => setIsOn(v)}/>
+                <ToggleButtonGroup
+                    exclusive
+                    disabled={carregando}
+                    fullWidth
+                    value={modo}
+                    onChange={(_, novo) => {
+                        if (novo) {
+                            setModo(novo);
+                            setMsgErro("");
+                        }
+                    }}
+                    aria-label="Tipo de busca"
+                    sx={seletorModo}
+                >
+                    <ToggleButton value="item">Item</ToggleButton>
+                    <ToggleButton value="grupo">Grupo</ToggleButton>
+                </ToggleButtonGroup>
 
-                <CampoDeBusca value={ean} onChange={setEan} onSubmit={handleSearch} onActivate={(v) => setIsOn(v)}/>
+                {isOn
+                    ? <CampoDeBuscaGrupo value={gp} onChange={setGp} onSubmit={handleSearch} disabled={carregando} loading={carregando}/>
+                    : <CampoDeBusca value={ean} onChange={setEan} onSubmit={handleSearch} disabled={carregando} loading={carregando}/>}
 
                 {msgErro !== "" && (
-                    <Typography variant="subtitle1" sx={{mb: 2, textAlign: "center"}}>
-                        <strong>{msgErro}</strong>
-                    </Typography>
+                    <Alert severity="warning" sx={{mb: 2, mx: "auto", maxWidth: 360, fontWeight: 500}}>
+                        {msgErro}
+                    </Alert>
                 )}
 
+                <Box sx={{opacity: carregando ? 0.5 : 1, pointerEvents: carregando ? "none" : "auto", transition: "opacity 150ms ease-out"}}
+                     aria-busy={carregando}>
                 <TabelaEstoque
                     data={estoque}
                     preco={preco?.price}
@@ -278,7 +350,8 @@ export default function HomePage() {
                     cod={submittedEan}
                     itemBuscado={itemBuscado}
                 />
-            </div>
+                </Box>
+            </Box>
         </div>
     );
 }

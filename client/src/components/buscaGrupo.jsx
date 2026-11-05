@@ -1,7 +1,7 @@
 // components/buscaGrupo.jsx
 import CampoBuscaBase from "./campoBuscaBase";
 
-export default function CampoDeBuscaGrupo({value, onChange, onSubmit, onActivate}) {
+export default function CampoDeBuscaGrupo({value, onChange, onSubmit, onActivate, disabled = false, loading = false}) {
     const handleSubmit = (v) => {
         onActivate?.(true);
         onSubmit(v);
@@ -23,6 +23,8 @@ export default function CampoDeBuscaGrupo({value, onChange, onSubmit, onActivate
             placeholder="Digite o código do grupo"
             inputAriaLabel="campo de busca por grupo"
             submitAriaLabel="Buscar por grupo"
+            disabled={disabled}
+            loading={loading}
         />
     );
 }

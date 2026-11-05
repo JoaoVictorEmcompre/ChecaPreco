@@ -1,13 +1,14 @@
 import CampoBuscaBase from './campoBuscaBase';
 
-export default function BuscaCNPJ({value, onChange, onSubmit}) {
+export default function BuscaCNPJ({value, onChange, onSubmit, disabled = false}) {
     return (
         <CampoBuscaBase
             value={value}
             onChange={onChange}
             onSubmit={onSubmit}
-            placeholder="Digite o CNPJ"
+            placeholder="CNPJ do cliente (opcional)"
             inputAriaLabel="CNPJ"
+            disabled={disabled}
         />
     );
 }

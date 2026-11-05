@@ -17,7 +17,7 @@ import {BrowserMultiFormatReader, BrowserCodeReader} from "@zxing/browser";
 import {DecodeHintType, BarcodeFormat} from "@zxing/library";
 import CampoBuscaBase from "./campoBuscaBase";
 
-export default function CampoDeBusca({value, onChange, onSubmit, onActivate}) {
+export default function CampoDeBusca({value, onChange, onSubmit, onActivate, disabled = false, loading = false}) {
     const [openScanner, setOpenScanner] = useState(false);
     const [videoDevices, setVideoDevices] = useState([]);
     const [selectedDeviceId, setSelectedDeviceId] = useState("");
@@ -319,10 +319,13 @@ export default function CampoDeBusca({value, onChange, onSubmit, onActivate}) {
                 placeholder="Escaneie ou digite o código do item"
                 inputAriaLabel="campo de código de barras"
                 submitAriaLabel="Buscar item pelo código"
+                disabled={disabled}
+                loading={loading}
             >
                 <IconButton
-                    sx={{p: "10px"}}
+                    sx={{p: "8px"}}
                     aria-label="Abrir câmera para leitura de código"
+                    disabled={disabled}
                     onClick={handleOpenScanner}
                 >
                     <CameraAltIcon/>

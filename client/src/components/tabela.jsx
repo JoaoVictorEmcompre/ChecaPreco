@@ -23,13 +23,13 @@ const StyledTableCell = styled(TableCell)(({theme}) => ({
     [`&.${tableCellClasses.head}`]: {
         backgroundColor: '#CB3B31',
         color: theme.palette.common.white,
-        border: '1px solid black',
+        border: '1px solid #b0302a',
         fontWeight: 600,
         textAlign: 'center',
     },
     [`&.${tableCellClasses.body}`]: {
-        border: '1px solid black',
-        padding: '8px 12px',
+        border: '1px solid #d9d9d9',
+        padding: '10px 12px',
     },
 }));
 
@@ -227,13 +227,13 @@ function TabelaMatriz({grupo, itemBuscado}) {
                 <Table>
                     <TableHead>
                         <TableRow>
-                            <StyledTableCell align='center'>Cor / Tamanho</StyledTableCell>
+                            <StyledTableCell align='center' sx={{position: 'sticky', left: 0, zIndex: 2}}>Cor / Tamanho</StyledTableCell>
                             {tamanhos.map(t => <StyledTableCell key={t} align="right">{t}</StyledTableCell>)}</TableRow>
                     </TableHead>
                     <TableBody>
                         {cores.map(cor => (
                             <StyledTableRow key={cor}>
-                                <StyledTableCell>{cor}</StyledTableCell>
+                                <StyledTableCell sx={{position: 'sticky', left: 0, zIndex: 1, backgroundColor: '#fff', fontWeight: 500}}>{cor}</StyledTableCell>
                                 {tamanhos.map(t => {
                                     const estoque = estoqueMap[`${cor}_${t}`];
                                     const destaque = ehItemBuscado(codigoMap[`${cor}_${t}`] || [], itemBuscado);
@@ -355,9 +355,15 @@ function formatarData(iso) {
     return isNaN(data.getTime()) ? '-' : data.toLocaleDateString('pt-BR');
 }
 
-function PedidosCompraDialog({open, onClose, pedidos, tipo}) {
+function PedidosCompraDialog({open, onClose, pedidos, tipo, itemBuscado}) {
     const mostrarCor = tipo === 'VAR_COR' || tipo === 'VAR_AMBOS';
     const mostrarTamanho = tipo === 'VAR_TAMANHO' || tipo === 'VAR_AMBOS';
+
+    const pedidosOrdenados = useMemo(
+        () => [...pedidos].sort((a, b) => String(a.deliveryForecastDate || '9999').localeCompare(String(b.deliveryForecastDate || '9999'))),
+        [pedidos]
+    );
+    const totalUnidades = pedidos.reduce((acc, p) => acc + (Number(p.quantity) || 0), 0);
 
     const containerRef = useRef(null);
     const [temMaisAbaixo, setTemMaisAbaixo] = useState(false);
@@ -382,28 +388,42 @@ function PedidosCompraDialog({open, onClose, pedidos, tipo}) {
             maxWidth="md"
             fullWidth
             slotProps={{
-                backdrop: {sx: {backgroundColor: 'rgba(0, 0, 0, 0.8)'}},
-                paper: {sx: {m: 1, width: 'calc(100% - 16px)'}},
+                backdrop: {sx: {backgroundColor: 'rgba(0, 0, 0, 0.6)'}},
+                paper: {sx: {m: 1, width: 'calc(100% - 16px)', borderRadius: 3}},
             }}
         >
-            <DialogContent sx={{position: 'relative', pt: 5, pb: 2, overflowY: 'visible'}}>
+            <DialogContent sx={{position: 'relative', p: {xs: 2, sm: 3}, overflowY: 'visible'}}>
                 <IconButton
                     onClick={onClose}
                     aria-label="Fechar"
-                    sx={{position: 'absolute', top: 8, right: 8}}
+                    sx={{position: 'absolute', top: 8, right: 8, color: '#666'}}
                 >
                     <CloseIcon/>
                 </IconButton>
 
-                <Typography variant="h6" sx={{mb: 1.5, fontWeight: 600, color: '#333'}}>
-                    Pedidos de compra em andamento
-                </Typography>
+                <Box sx={{display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, pr: 5}}>
+                    <Box sx={{
+                        width: 44, height: 44, flexShrink: 0, borderRadius: '50%',
+                        backgroundColor: '#e8f5e9', color: '#2e7d32',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                        <LocalShippingIcon/>
+                    </Box>
+                    <Box>
+                        <Typography variant="h6" sx={{fontWeight: 600, color: '#222', lineHeight: 1.2}}>
+                            Pedidos de compra
+                        </Typography>
+                        <Typography variant="body2" sx={{color: '#666'}}>
+                            {pedidos.length} {pedidos.length === 1 ? 'item' : 'itens'} · {totalUnidades} un. a caminho
+                        </Typography>
+                    </Box>
+                </Box>
 
                 <Box sx={{position: 'relative'}}>
                     <TableContainer
                         ref={containerRef}
                         onScroll={verificarScroll}
-                        sx={{maxHeight: {xs: '70vh', sm: '60vh'}, overflowY: 'auto'}}
+                        sx={{maxHeight: {xs: '65vh', sm: '60vh'}, overflowY: 'auto', border: '1px solid #e0e0e0', borderRadius: 2}}
                     >
                         <Table size="small" stickyHeader>
                             <TableHead>
@@ -411,18 +431,21 @@ function PedidosCompraDialog({open, onClose, pedidos, tipo}) {
                                     {mostrarCor && <StyledTableCell>Cor</StyledTableCell>}
                                     {mostrarTamanho && <StyledTableCell>Tamanho</StyledTableCell>}
                                     <StyledTableCell align="center">Qtd.</StyledTableCell>
-                                    <StyledTableCell>Previsão</StyledTableCell>
+                                    <StyledTableCell align="center">Previsão</StyledTableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {pedidos.map((p) => (
-                                    <StyledTableRow key={`${p.orderCode}-${p.productCode}-${p.colorName}-${p.sizeName}`}>
-                                        {mostrarCor && <StyledTableCell>{p.colorName}</StyledTableCell>}
-                                        {mostrarTamanho && <StyledTableCell>{p.sizeName}</StyledTableCell>}
-                                        <StyledTableCell align="center">{p.quantity}</StyledTableCell>
-                                        <StyledTableCell>{formatarData(p.deliveryForecastDate)}</StyledTableCell>
-                                    </StyledTableRow>
-                                ))}
+                                {pedidosOrdenados.map((p) => {
+                                    const destaque = estiloDestaque(ehItemBuscado(p.productCode, itemBuscado));
+                                    return (
+                                        <StyledTableRow key={`${p.orderCode}-${p.productCode}-${p.colorName}-${p.sizeName}`}>
+                                            {mostrarCor && <StyledTableCell sx={destaque}>{p.colorName}</StyledTableCell>}
+                                            {mostrarTamanho && <StyledTableCell sx={destaque}>{p.sizeName}</StyledTableCell>}
+                                            <StyledTableCell align="center" sx={{fontWeight: 600, ...destaque}}>{p.quantity}</StyledTableCell>
+                                            <StyledTableCell align="center" sx={destaque}>{formatarData(p.deliveryForecastDate)}</StyledTableCell>
+                                        </StyledTableRow>
+                                    );
+                                })}
                             </TableBody>
                         </Table>
                     </TableContainer>
@@ -480,14 +503,20 @@ export default function TabelaEstoque({data, preco, desconto = 0, combos = [], p
                         <>
                             <Chip
                                 icon={<LocalShippingIcon sx={{color: 'white !important'}}/>}
-                                label="Pedido"
+                                label="Pedido de compra"
                                 onClick={() => setPedidoAberto(ref)}
                                 sx={{
-                                    mb: 1,
+                                    mb: 1.5,
+                                    height: 36,
+                                    px: 0.5,
                                     backgroundColor: '#2e7d32',
                                     color: 'white',
-                                    fontWeight: 700,
+                                    fontSize: 14,
+                                    fontWeight: 600,
                                     cursor: 'pointer',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                    transition: 'background-color 150ms ease-out, box-shadow 150ms ease-out',
+                                    '&:hover': {backgroundColor: '#256b29', boxShadow: '0 2px 6px rgba(0,0,0,0.25)'},
                                 }}
                                 title="Pedido de compra em andamento para este produto"
                             />
@@ -496,47 +525,52 @@ export default function TabelaEstoque({data, preco, desconto = 0, combos = [], p
                                 onClose={() => setPedidoAberto(null)}
                                 pedidos={pedidosGrupo}
                                 tipo={tipo}
+                                itemBuscado={itemBuscado}
                             />
                         </>
                     )}
 
-                    {desconto > 0 && (
-                        <Typography variant="h1"
-                                    sx={{mb: 1, mp: 2, fontSize: '18px', fontWeight: 300, color: '#333'}}>
-                            Desconto CNPJ: {desconto}%
-                        </Typography>
-                    )}
-
-                    <Typography variant="h1" sx={{mb: 1, mp: 2, fontSize: '18px', fontWeight: 300, color: '#333'}}>
+                    <Typography variant="body2" sx={{mb: 0.5, color: '#777', fontSize: '14px'}}>
                         Código: {cod}
                     </Typography>
 
-                    <Typography variant="h1" sx={{mb: 1, color: '#333', fontSize: '28px', fontWeight: 400}}>
+                    <Typography component="h2" variant="h1"
+                                sx={{mb: 1.5, color: '#222', fontSize: {xs: '22px', sm: '28px'}, fontWeight: 600, lineHeight: 1.25}}>
                         {nomeBase}
                     </Typography>
 
-                    {precoFinal.labelsDe.map((item, idx) => (
+                    {desconto > 0 && (
+                        <Chip
+                            label={`Desconto CNPJ: ${desconto}%`}
+                            size="small"
+                            sx={{mb: 1.5, backgroundColor: '#e8f5e9', color: '#1b5e20', fontWeight: 600}}
+                        />
+                    )}
+
+                    {precoFinal.labelsDe.map((item) => (
                         <Typography
                             key={item.label}
                             variant="body2"
-                            sx={{
-                                color: '#888',
-                                textDecoration: 'line-through',
-                                mb: idx === precoFinal.labelsDe.length - 1 ? -1 : 0,
-                                fontSize: '19px',
-                                fontWeight: 400,
-                            }}
+                            sx={{color: '#888', textDecoration: 'line-through', fontSize: '17px', fontWeight: 400}}
                         >
                             {item.label}: {formataPreco(item.valor)}
                         </Typography>
                     ))}
 
-                    <Typography variant="h1" sx={{ mb: 2, color: '#333', fontSize: '30px', fontWeight: 400 }}>
-                        {precoFinal.temDescontoCnpj ? 'Para você:' : 'Preço:'} {formataPreco(precoFinal.precoPor)}
+                    <Typography component="p" sx={{mb: 2, color: '#333', fontSize: '18px'}}>
+                        {precoFinal.temDescontoCnpj ? 'Para você:' : 'Preço:'}{' '}
+                        <Box component="span" sx={{
+                            fontSize: {xs: '32px', sm: '38px'},
+                            fontWeight: 700,
+                            lineHeight: 1.2,
+                            color: precoFinal.temPromocao || precoFinal.temDescontoCnpj ? '#CB3B31' : '#222',
+                        }}>
+                            {formataPreco(precoFinal.precoPor)}
+                        </Box>
                     </Typography>
 
                     {Array.isArray(combos) && combos.length > 0 && (
-                        <Box sx={{mb: 2}}>
+                        <Box sx={{mb: 2, p: 1.5, borderRadius: 2, backgroundColor: '#fdf3f2'}}>
                             {combos.map((c) => {
                                 const valor = formataPreco(
                                     precoComPercentual(precoFinal.precoPor, c.percentual)
@@ -547,22 +581,18 @@ export default function TabelaEstoque({data, preco, desconto = 0, combos = [], p
                                         key={c.quantidade}
                                         sx={{
                                             display: "flex",
+                                            flexWrap: "wrap",
                                             justifyContent: "space-between",
-                                            alignItems: "center",
-                                            gap: 3,
+                                            alignItems: "baseline",
+                                            columnGap: 2,
+                                            py: 0.5,
                                         }}
                                     >
-                                        <Typography variant="h3" sx={{mb: 0, fontWeight: 400, fontSize: '20px'}}>
+                                        <Typography sx={{fontSize: '16px', color: '#333'}}>
                                             Leve {c.quantidade} unidades ou mais e pague:
                                         </Typography>
 
-                                        <Typography variant="h3" sx={{
-                                            mb: 0,
-                                            fontWeight: 400,
-                                            fontSize: '28px',
-                                            whiteSpace: "nowrap",
-                                            mr: 5.6
-                                        }}>
+                                        <Typography sx={{fontSize: '24px', fontWeight: 600, whiteSpace: "nowrap", color: '#CB3B31'}}>
                                             {valor}
                                         </Typography>
                                     </Box>
@@ -571,8 +601,8 @@ export default function TabelaEstoque({data, preco, desconto = 0, combos = [], p
                         </Box>
                     )}
 
-                    <Typography variant="h2" sx={{mb: 1, color: '#333', fontSize: '22px', fontWeight: 400}}>
-                        Quantidade Estoque: {calcularEstoqueTotal(grupo)}
+                    <Typography variant="h2" sx={{mb: 1.5, color: '#333', fontSize: '20px', fontWeight: 400}}>
+                        Quantidade em estoque: <strong>{calcularEstoqueTotal(grupo)}</strong>
                     </Typography>
 
                     {tipo === "VAR_TAMANHO" && <TabelaPorTamanho grupo={grupo} itemBuscado={itemBuscado}/>}
