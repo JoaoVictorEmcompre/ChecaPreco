@@ -67,7 +67,7 @@ ChecaPreco/
         ├── ean.js              # GET  /api/ean             -> resolve EAN -> SKU
         ├── cnpj.js             # GET  /api/cnpj            -> % de desconto do CNPJ
         ├── combo.js            # GET  /api/combo           -> combos "leve X pague Y"
-        ├── promocao.js         # GET  /api/promocao        -> promoção ativa do SKU
+        ├── promocao.js         # GET  /api/promocao?grupo=  -> promoção ativa do grupo (referenceCode)
         └── pedidosCompra.js    # POST /api/pedidos-compra  -> pedidos de compra em andamento
 ```
 
@@ -130,7 +130,7 @@ Não há banco de dados — **tudo vem de duas APIs de terceiros**:
 
 ### b) Sistema interno "PCP" (regras de desconto/combo/promoção/pedido de compra)
 - Base: `PCP_BASE_URL` (ver seção 5) — normalmente só acessível de dentro da rede da empresa/VPN.
-- Endpoints usados: `/pcp/cnpj/{cnpj}`, `/pcp/combo/{groupCode}`, `/pcp/promocao/{sku}`.
+- Endpoints usados: `/pcp/cnpj/{cnpj}`, `/pcp/combo/{groupCode}`, `/pcp/promocao/grupo/{grupo}`.
 
 ### Credenciais e login automático
 
@@ -146,15 +146,15 @@ Isso significa que, na prática, todo mundo que abre o app entra como o mesmo us
 Tudo acontece em `client/src/pages/home.jsx`, função `handleSearch`. Existem **3 formas de busca**, cada uma dispara um fluxo ligeiramente diferente:
 
 1. **Por EAN** (código de barras, 13+ dígitos, digitado ou escaneado pela câmera em `busca.jsx`):
-   `EAN → GET /api/ean (resolve SKU) → preço + combo + promoção (em paralelo) → estoque do grupo → pedidos de compra do grupo`
+   `EAN → GET /api/ean (resolve SKU) → preço + combo (em paralelo) → estoque + promoção do grupo (em paralelo, usando o referenceCode do preço) → pedidos de compra do grupo`
 
 2. **Por código "padrão"** (campo de EAN mas digitando um código de grupo direto, não escaneado):
-   `código → preço + combo + promoção (em paralelo) → estoque do grupo → pedidos de compra do grupo`
+   `código → preço + combo (em paralelo) → estoque + promoção do grupo (em paralelo, usando o referenceCode do preço) → pedidos de compra do grupo`
 
 3. **Por "código do grupo"** (campo dedicado, `buscaGrupo.jsx`, ativa o modo `isOn`):
-   `código (tratado como referenceCode) → estoque → extrai productCode do 1º item → preço + combo + promoção (em paralelo) → pedidos de compra do grupo`
+   `código (tratado como referenceCode) → estoque → extrai productCode do 1º item → preço + combo + promoção do grupo (em paralelo) → pedidos de compra do grupo`
 
-Em todos os casos, as chamadas de **preço + combo + promoção** são feitas com `Promise.allSettled` (paralelas, não sequenciais) — isso foi uma otimização feita porque antes eram sequenciais e cada busca demorava bem mais.
+Em todos os casos, as chamadas são paralelas (`Promise.allSettled`/`Promise.all`). A **promoção** é consultada pelo código do grupo (`referenceCode`), então nos fluxos de EAN e "padrão" ela só sai depois do preço, junto com o estoque — isso foi uma otimização feita porque antes eram sequenciais e cada busca demorava bem mais.
 
 A busca por **pedidos de compra** só acontece depois que se tem a lista completa de SKUs do grupo (todas as variações de cor/tamanho), porque ela precisa saber todos os SKUs pra filtrar corretamente (ver seção 9).
 

@@ -6,13 +6,13 @@ const router = express.Router();
 const PCP_BASE_URL = process.env.PCP_BASE_URL || 'http://187.95.116.54:9989';
 
 router.get('/', async (req, res) => {
-    const {sku} = req.query;
+    const {grupo} = req.query;
 
-    if (!sku) {
-        return res.status(400).json({error: 'SKU é obrigatório.'});
+    if (!grupo) {
+        return res.status(400).json({error: 'grupo é obrigatório.'});
     }
 
-    const url = `${PCP_BASE_URL}/pcp/promocao/${sku}`;
+    const url = `${PCP_BASE_URL}/pcp/promocao/grupo/${encodeURIComponent(grupo)}`;
 
     try {
         const response = await axios.get(url, {timeout: 5000});
@@ -22,12 +22,12 @@ router.get('/', async (req, res) => {
             return res.json({promocao: null});
         }
 
-        const cdProduto = data.cdProduto;
+        const cdGrupo = data.cdGrupo;
         const vlPromocao = Number(data.vlPromocao);
         const vlAnterior = Number(data.vlAnterior);
 
-        if (String(cdProduto) !== String(sku)) {
-            console.warn('[PROMOÇÃO] Produto retornado não corresponde ao SKU. sku:', sku, '| cdProduto:', cdProduto);
+        if (String(cdGrupo) !== String(grupo)) {
+            console.warn('[PROMOÇÃO] Grupo retornado não corresponde ao grupo buscado. grupo:', grupo, '| cdGrupo:', cdGrupo);
             return res.json({promocao: null});
         }
 
@@ -42,7 +42,8 @@ router.get('/', async (req, res) => {
         const percentualDesconto = ((vlAnterior - vlPromocao) / vlAnterior) * 100;
 
         const promocao = {
-            cdProduto: String(cdProduto),
+            cdGrupo: String(cdGrupo),
+            dsGrupo: data.dsGrupo,
             vlPromocao,
             vlAnterior,
             percentualDesconto: Number(percentualDesconto.toFixed(2)),
@@ -53,7 +54,7 @@ router.get('/', async (req, res) => {
         const {status, tipo, descricao} = logErroApi('PROMOÇÃO', {
             url,
             err,
-            contexto: `sku=${sku}`,
+            contexto: `grupo=${grupo}`,
         });
 
         if (TIPOS_INDISPONIVEL.includes(tipo)) {
