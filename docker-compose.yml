@@ -1,0 +1,53 @@
+name: checapreco
+
+services:
+  checapreco-web:
+    build: ./client
+    container_name: checapreco-web
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - web
+    depends_on:
+      - checapreco-api
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.checapreco-web.rule=Host(`bfmoda.com.br`) || Host(`www.bfmoda.com.br`)
+      - traefik.http.routers.checapreco-web.entrypoints=websecure
+      - traefik.http.routers.checapreco-web.tls.certresolver=le
+      - traefik.http.services.checapreco-web.loadbalancer.server.port=80
+
+  checapreco-api:
+    build: ./server
+    container_name: checapreco-api
+    restart: unless-stopped
+    env_file:
+      - path: ./server/.env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+    expose:
+      - "5000"
+    networks:
+      - web
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:5000/api/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      # regra mais longa que a do web -> vence para /api; sem strip (o Express espera /api)
+      - traefik.http.routers.checapreco-api.rule=(Host(`bfmoda.com.br`) || Host(`www.bfmoda.com.br`)) && PathPrefix(`/api`)
+      - traefik.http.routers.checapreco-api.entrypoints=websecure
+      - traefik.http.routers.checapreco-api.tls.certresolver=le
+      - traefik.http.services.checapreco-api.loadbalancer.server.port=5000
+
+networks:
+  web:
+    external: true

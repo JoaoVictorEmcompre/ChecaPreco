@@ -30,11 +30,16 @@ Não existe TypeScript, não existem testes automatizados, e **não existe banco
 ```
 ChecaPreco/
 ├── package.json              # raiz — só o script "dev" (concurrently) e "install:all"
+├── docker-compose.yml        # produção: checapreco-web + checapreco-api atrás do Traefik da VPS
+├── .gitattributes            # força LF (Dockerfile/nginx/YAML criados no Windows)
+├── .github/workflows/deploy.yml  # deploy automático na VPS a cada push na main
 ├── documentacao.md           # este arquivo
 │
 ├── client/                   # Frontend React (Vite)
 │   ├── .env.development / .env.production / .env.test   # definem BASE_URL do Vite
-│   ├── vite.config.js        # proxy /api -> http://localhost:5000
+│   ├── vite.config.js        # proxy /api -> http://localhost:5000 (só em dev)
+│   ├── Dockerfile            # build do Vite + Nginx servindo o dist
+│   ├── nginx.conf            # SPA fallback (try_files) e cache dos assets
 │   └── src/
 │       ├── main.jsx / App.jsx        # bootstrap, tema MUI, login automático, rotas
 │       ├── pages/
@@ -55,6 +60,7 @@ ChecaPreco/
 │           └── pedidosCompra.services.js
 │
 └── server/                   # Backend Express (proxy)
+    ├── Dockerfile             # node:20-alpine, npm ci --omit=dev
     ├── index.js               # bootstrap do Express, monta rotas, tratamento de erro global
     ├── .env                   # local, NÃO versionado (só existe na sua máquina) — ver seção 5
     ├── .env.example           # documenta as variáveis disponíveis
@@ -108,7 +114,7 @@ Isso permite que, **rodando local**, as chamadas ao PCP vão para o IP da rede l
 ```
 PCP_BASE_URL=http://192.168.3.214:8090
 ```
-Em produção, esse arquivo simplesmente não existe (é ignorado pelo `.gitignore`), então o código cai no IP público padrão automaticamente.
+Em produção, esse arquivo é **opcional**: se existir em `/srv/docker/apps/ChecaPreco/server/.env` na VPS, o compose carrega ele (`env_file` com `required: false`); se não existir, o código cai nos padrões (porta `5000` e IP público do PCP). O deploy não apaga esse arquivo.
 
 ### `client/.env.development` / `.env.production` / `.env.test`
 
@@ -221,63 +227,64 @@ Além disso, `server/index.js` tem: middleware final de erro (pega exceções n�
 
 ## 12. Deploy / Produção
 
-O projeto roda numa **VM única** (sem Docker, sem CI/CD — o deploy é manual, via SSH) que atende o domínio **bfmoda.com.br**.
+O projeto roda na **VPS de produção da BF Colchões / BF Casa** (a mesma de `felizacordarcolchoes.com.br`), em Docker, atrás do **Traefik v2.11** que já atende os outros projetos. O domínio **bfmoda.com.br** (DNS na Cloudflare, registros A em modo *DNS only*) aponta para o IP da VPS, e o Traefik separa o tráfego pelo `Host`.
 
-### Estrutura na VM
+> Até a migração, o projeto rodava numa VM separada (sem Docker, deploy manual com PM2). Essa VM foi desativada.
 
-| O quê | Onde | Observação |
-|---|---|---|
-| Repositório git (front + back) | `/var/www/teste/ChecaPreco` | Apesar do `teste` no caminho, **essa é a única VM/ambiente que existe** — não é staging, é a produção real. |
-| Frontend (arquivos estáticos do build) | `/var/www/html` | Servido por um webserver (nginx/apache) que fica **fora deste repositório** — não temos visibilidade da configuração dele a partir daqui. |
-| Backend (Node/Express rodando) | `/root/minha-aplicacao/public` | Gerenciado pelo **PM2**, processo chamado `checapreco-back`. |
+### Arquitetura
 
-Existe, necessariamente, um proxy reverso configurado na VM (provavelmente nginx) que decide o que vai para os arquivos estáticos em `/var/www/html` e o que vai para o backend Node (porta `5000` por padrão, ver seção 5) — essa configuração também não está neste repositório.
+| Container | Serviço | Porta interna | Rota no Traefik |
+|---|---|---|---|
+| `checapreco-web` | Nginx servindo o build do Vite | 80 | `Host(bfmoda.com.br) \|\| Host(www.bfmoda.com.br)` |
+| `checapreco-api` | Express (`node index.js`) | 5000 | mesmo Host **&& PathPrefix(/api)**, sem strip |
 
-### Passo a passo de deploy (manual — rodar comando por comando na VM)
+- As rotas ficam em **labels** no `docker-compose.yml` (não no `dynamic.yml` do proxy).
+- A regra do api é mais longa que a do web, então o Traefik manda `/api/*` para o Express e todo o resto para o Nginx.
+- Sem strip: o Express continua recebendo `/api/...`, igual em desenvolvimento.
+- Os dois containers entram só na rede externa `web` e usam `expose:` (nenhuma porta publicada no host).
+- O api tem healthcheck em `/api/ping`; o Traefik só manda tráfego quando ele está healthy.
+- Certificado Let's Encrypt emitido automaticamente pelo Traefik (resolver `le`).
+- As chamadas para TOTVS e PCP saem pelo IP público da VPS.
 
-Não existe automação: cada deploy é feito digitando esses comandos na SSH, um de cada vez.
+### Deploy automático
 
-**1. Atualiza o repositório**
+Push na `main` → GitHub Actions (`.github/workflows/deploy.yml`) entra por SSH na VPS e roda:
+
 ```bash
-cd /var/www/teste/ChecaPreco
-git pull
+set -e
+cd /srv/docker/apps/ChecaPreco
+git pull --ff-only origin main
+docker compose build
+docker compose up -d --remove-orphans
 ```
 
-**2. Instala dependências e builda o frontend**
+Secrets necessários no repositório: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (os mesmos dos outros projetos da VPS). Também dá para disparar manualmente pela aba Actions (`workflow_dispatch`).
+
+### Deploy manual (se o Actions estiver fora)
+
 ```bash
-cd /var/www/teste/ChecaPreco/client
-npm install
-npm run build
+cd /srv/docker/apps/ChecaPreco
+git pull --ff-only origin main
+docker compose build && docker compose up -d --remove-orphans
 ```
 
-**3. Publica o frontend (substitui os arquivos estáticos servidos)**
+### Comandos úteis
+
 ```bash
-rm -rf /var/www/html/*
-cp -r /var/www/teste/ChecaPreco/client/dist/* /var/www/html/
+docker compose ps
+docker logs -f --tail 100 checapreco-api
+docker logs -f --tail 100 checapreco-web
+curl -s https://bfmoda.com.br/api/ping
 ```
 
-**4. Publica o backend**
-```bash
-rm -rf /root/minha-aplicacao/public/*
-cp -r /var/www/teste/ChecaPreco/server/* /root/minha-aplicacao/public/
-```
+### Cuidados
 
-**5. Instala dependências do backend e reinicia via PM2**
-```bash
-cd /root/minha-aplicacao/public
-npm install
-pm2 restart checapreco-back
-```
-
-### Cuidados importantes (ler antes de rodar)
-
-- **O passo 4 (`rm -rf .../public/*`) apaga qualquer `.env` que exista em `/root/minha-aplicacao/public`.** Hoje isso não é um problema porque a produção não precisa de `server/.env` (ela já cai nos valores padrão corretos — porta `5000` e `PCP_BASE_URL` público, ver seção 5). Mas se um dia alguém criar um `.env` ali pra sobrescrever algo em produção, **ele vai ser apagado a cada deploy** — nesse caso, seria preciso copiar ele de volta manualmente depois do passo 4, antes do `npm install`/`pm2 restart`.
-- **O passo 1 (`git pull`) falha se houver alterações locais não commitadas na VM.** Se isso acontecer, rode `git status` primeiro pra ver o que é, antes de decidir descartar (`git checkout -- .`) ou não.
-- **Se o processo `checapreco-back` não existir ainda no PM2** (ex.: VM nova, ou processo removido), o `pm2 restart` do passo 5 vai falhar dizendo que o processo não existe. Nesse caso, o comando certo pra criar ele pela primeira vez seria `pm2 start index.js --name checapreco-back` (a partir de `/root/minha-aplicacao/public`), mas isso é só pra referência — normalmente não deveria ser necessário no dia a dia.
+- **`git pull --ff-only` falha se houver alteração local na VPS.** Não edite arquivos versionados direto na VPS; o único arquivo local permitido é `server/.env`.
+- **`client/.env.production` é embutido no build.** Nada sensível pode ir para ele (tudo que o Vite lê vai para o JavaScript público).
 
 ## 13. Pontos de atenção / débito técnico conhecido
 
-- **Credenciais hardcoded**: `client_secret` do ERP (`server/routes/login.js`) e usuário/senha fixos do login automático (`client/src/service/login.services.js`). Não são catastróficos (a API do ERP já é o limite de segurança real), mas o ideal seria mover para variáveis de ambiente.
+- **Credenciais hardcoded**: `client_secret` do ERP (`server/routes/login.js`) e usuário/senha fixos do login automático (`client/src/service/login.services.js`). **Risco real**: a API do TOTVS é acessível pela internet, então quem tiver esses valores gera token direto, sem passar pelo app. Além disso, o usuário/senha do login automático vão para o JavaScript público e o token do ERP fica no navegador. Correção planejada: login feito pelo backend com credenciais em `server/.env`, token guardado só no servidor, e rotação das credenciais atuais.
 - **Workaround `validaDesc`**: força desconto "1" → "10" (ver seção 8). É um patch, não uma correção — o bug real está na origem dos dados (sistema PCP).
 - **Sem testes automatizados** e **sem TypeScript**: qualquer mudança na lógica de cálculo de preço (seção 8) merece teste manual cuidadoso, já que não há rede de segurança automatizada.
 - **`server/routes/ean.js`** desativa TLS só para aquela chamada (ver seção 6) — se um dia o certificado do host for corrigido, dá pra remover esse workaround.
