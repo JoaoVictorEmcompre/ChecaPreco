@@ -4,6 +4,7 @@ import {ThemeProvider, createTheme} from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
 import Login from './pages/login'
 import HomePage from './pages/home'
+import SemConexao from './components/semConexao'
 import {loginAutomatico} from './service/login.services.js'
 import {getToken} from './service/token.js'
 import './App.css'
@@ -39,8 +40,23 @@ const theme = createTheme({
 
 export default function App() {
     const [carregandoLogin, setCarregandoLogin] = useState(true)
+    const [online, setOnline] = useState(() => navigator.onLine)
 
     useEffect(() => {
+        const aoFicarOnline = () => setOnline(true)
+        const aoFicarOffline = () => setOnline(false)
+        window.addEventListener('online', aoFicarOnline)
+        window.addEventListener('offline', aoFicarOffline)
+        return () => {
+            window.removeEventListener('online', aoFicarOnline)
+            window.removeEventListener('offline', aoFicarOffline)
+        }
+    }, [])
+
+    useEffect(() => {
+        // Sem rede o login automático falharia: espera a conexão voltar
+        if (!online) return
+
         const iniciarLogin = async () => {
             try {
                 if (!getToken()) {
@@ -54,10 +70,13 @@ export default function App() {
         }
 
         iniciarLogin()
-    }, [])
+    }, [online])
+
+    // A tela de "sem conexão" cobre o app em vez de desmontá-lo: a busca em andamento não se perde
+    const semConexao = !online && <ThemeProvider theme={theme}><SemConexao onReconectou={() => setOnline(true)}/></ThemeProvider>
 
     if (carregandoLogin) {
-        return <div>Carregando...</div>
+        return <>{semConexao || <div>Carregando...</div>}</>
     }
 
     return (
@@ -69,6 +88,7 @@ export default function App() {
                     <Route path="/" element={<HomePage/>}/>
                 </Routes>
             </Router>
+            {!online && <SemConexao onReconectou={() => setOnline(true)}/>}
         </ThemeProvider>
     )
 }
