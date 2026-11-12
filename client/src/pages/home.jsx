@@ -1,4 +1,4 @@
-import {useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {Alert, Box, LinearProgress, ToggleButton, ToggleButtonGroup} from "@mui/material";
 import CampoDeBusca from "../components/busca";
 import CampoDeBuscaGrupo from "../components/buscaGrupo";
@@ -12,6 +12,8 @@ import {getDesc} from "../service/cnpj.services";
 import {getCombo} from "../service/combo.services";
 import {getPromocao} from "../service/promocao.services.js";
 import {getPedidosCompra} from "../service/pedidosCompra.services.js";
+import {adicionarAoHistorico, lerHistorico, limparHistorico, removerDoHistorico} from "../service/historicoBusca";
+import UltimasPesquisas from "../components/ultimasPesquisas";
 
 const resolverCombos = (result, contexto) => {
     if (result.status === "fulfilled") return result.value;
@@ -78,8 +80,23 @@ export default function HomePage() {
     const [promocao, setPromocao] = useState(null);
     const [pedidosCompra, setPedidosCompra] = useState([]);
     const [itemBuscado, setItemBuscado] = useState(null);
+    // Modo da busca que gerou o resultado na tela (o seletor pode mudar depois)
+    const [modoBuscado, setModoBuscado] = useState("item");
+    const [historico, setHistorico] = useState(() => lerHistorico());
+    // Última busca disparada (código + modo), para salvar no histórico só se der resultado
+    const ultimaBuscaRef = useRef(null);
 
     const isEan = (codigo) => /^\d{13,}$/.test(codigo);
+
+    useEffect(() => {
+        if (estoque.length > 0 && ultimaBuscaRef.current) {
+            const {codigo, modo: modoBusca} = ultimaBuscaRef.current;
+            ultimaBuscaRef.current = null;
+            setHistorico(adicionarAoHistorico(codigo, modoBusca, estoque[0]?.productName || "", String(estoque[0]?.referenceCode ?? "")));
+        }
+    }, [estoque]);
+
+    const telaVazia = !submittedEan && estoque.length === 0 && msgErro === "";
 
     const buscarPedidosCompra = async (estoqueData, contexto) => {
         const skus = skusDoGrupo(estoqueData);
@@ -95,13 +112,16 @@ export default function HomePage() {
         }
     };
 
-    const executarBusca = async (incomingCode) => {
+    // modoForcado: usado ao repetir uma pesquisa do histórico (o estado `modo` ainda não atualizou)
+    const executarBusca = async (incomingCode, modoForcado) => {
+        const isOn = modoForcado ? modoForcado === "grupo" : modo === "grupo";
         const raw = typeof incomingCode === "string" && incomingCode.length > 0
             ? incomingCode
             : (isOn ? gp : ean);
         const codigo = (raw || "").trim();
 
         if (!codigo) {
+            ultimaBuscaRef.current = null;
             if (isOn) setGp("");
             else setEan("");
             setSubmittedEan("");
@@ -115,6 +135,9 @@ export default function HomePage() {
             return;
         }
 
+        const modoDaBusca = isEan(codigo) ? "item" : (isOn ? "grupo" : "item");
+        ultimaBuscaRef.current = {codigo, modo: modoDaBusca};
+        setModoBuscado(modoDaBusca);
         setSubmittedEan(codigo);
         setMsgErro("");
         // Só busca por item (EAN ou código do item) destaca a linha; busca por grupo não
@@ -257,14 +280,20 @@ export default function HomePage() {
     };
 
     // Bloqueia novas ações enquanto uma busca está em andamento
-    const handleSearch = async (incomingCode) => {
+    const handleSearch = async (incomingCode, modoForcado) => {
         if (carregando) return;
         setCarregando(true);
         try {
-            await executarBusca(incomingCode);
+            await executarBusca(incomingCode, modoForcado);
         } finally {
             setCarregando(false);
         }
+    };
+
+    const repetirPesquisa = (item) => {
+        if (carregando) return;
+        setModo(item.modo);
+        handleSearch(item.codigo, item.modo);
     };
 
     const executarBuscaCNPJ = async (valor) => {
@@ -304,7 +333,7 @@ export default function HomePage() {
 
     return (
         <div>
-            <Header username={username}/>
+            <Header username={username} onLimpar={() => handleSearch("")} disabled={carregando}/>
             {carregando && <LinearProgress sx={{height: 3}}/>}
 
             <Box sx={{p: {xs: 2, sm: 3}, maxWidth: 960, mx: "auto"}}>
@@ -332,6 +361,15 @@ export default function HomePage() {
                     ? <CampoDeBuscaGrupo value={gp} onChange={setGp} onSubmit={handleSearch} disabled={carregando} loading={carregando}/>
                     : <CampoDeBusca value={ean} onChange={setEan} onSubmit={handleSearch} disabled={carregando} loading={carregando}/>}
 
+                {telaVazia && !carregando && (
+                    <UltimasPesquisas
+                        itens={historico}
+                        onSelect={repetirPesquisa}
+                        onRemove={(item) => setHistorico(removerDoHistorico(item.codigo, item.modo))}
+                        onClear={() => setHistorico(limparHistorico())}
+                    />
+                )}
+
                 {msgErro !== "" && (
                     <Alert severity="warning" sx={{mb: 2, mx: "auto", maxWidth: 360, fontWeight: 500}}>
                         {msgErro}
@@ -349,6 +387,7 @@ export default function HomePage() {
                     pedidosCompra={pedidosCompra}
                     cod={submittedEan}
                     itemBuscado={itemBuscado}
+                    modoBusca={modoBuscado}
                 />
                 </Box>
             </Box>

@@ -355,6 +355,16 @@ function formatarData(iso) {
     return isNaN(data.getTime()) ? '-' : data.toLocaleDateString('pt-BR');
 }
 
+function estaAtrasado(iso) {
+    if (!iso) return false;
+    const data = new Date(iso);
+    if (isNaN(data.getTime())) return false;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    data.setHours(0, 0, 0, 0);
+    return data < hoje;
+}
+
 function PedidosCompraDialog({open, onClose, pedidos, tipo, itemBuscado}) {
     const mostrarCor = tipo === 'VAR_COR' || tipo === 'VAR_AMBOS';
     const mostrarTamanho = tipo === 'VAR_TAMANHO' || tipo === 'VAR_AMBOS';
@@ -442,7 +452,15 @@ function PedidosCompraDialog({open, onClose, pedidos, tipo, itemBuscado}) {
                                             {mostrarCor && <StyledTableCell sx={destaque}>{p.colorName}</StyledTableCell>}
                                             {mostrarTamanho && <StyledTableCell sx={destaque}>{p.sizeName}</StyledTableCell>}
                                             <StyledTableCell align="center" sx={{fontWeight: 600, ...destaque}}>{p.quantity}</StyledTableCell>
-                                            <StyledTableCell align="center" sx={destaque}>{formatarData(p.deliveryForecastDate)}</StyledTableCell>
+                                            <StyledTableCell
+                                                align="center"
+                                                sx={estaAtrasado(p.deliveryForecastDate)
+                                                    ? {...destaque, color: '#d32f2f', fontWeight: 700}
+                                                    : destaque}
+                                                title={estaAtrasado(p.deliveryForecastDate) ? 'Entrega em atraso' : undefined}
+                                            >
+                                                {formatarData(p.deliveryForecastDate)}
+                                            </StyledTableCell>
                                         </StyledTableRow>
                                     );
                                 })}
@@ -475,7 +493,7 @@ function PedidosCompraDialog({open, onClose, pedidos, tipo, itemBuscado}) {
     );
 }
 
-export default function TabelaEstoque({data, preco, desconto = 0, combos = [], promocao = null, pedidosCompra = [], cod, itemBuscado = null}) {
+export default function TabelaEstoque({data, preco, desconto = 0, combos = [], promocao = null, pedidosCompra = [], cod, itemBuscado = null, modoBusca = 'item'}) {
     const [pedidoAberto, setPedidoAberto] = useState(null);
 
     const grupos = useMemo(() => {
@@ -531,7 +549,18 @@ export default function TabelaEstoque({data, preco, desconto = 0, combos = [], p
                     )}
 
                     <Typography variant="body2" sx={{mb: 0.5, color: '#777', fontSize: '14px'}}>
-                        Código: {cod}
+                        {modoBusca === 'grupo' ? (
+                            <Box component="span" sx={{whiteSpace: 'nowrap'}}>Grupo: {ref}</Box>
+                        ) : (
+                            <>
+                                <Box component="span" sx={{whiteSpace: 'nowrap'}}>
+                                    Código: {cod}
+                                    <Box component="span" aria-hidden="true" sx={{ml: 0.75}}>•</Box>
+                                </Box>
+                                {' '}
+                                <Box component="span" sx={{whiteSpace: 'nowrap'}}>Grupo: {ref}</Box>
+                            </>
+                        )}
                     </Typography>
 
                     <Typography component="h2" variant="h1"

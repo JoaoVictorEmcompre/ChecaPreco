@@ -1,8 +1,17 @@
-import {Box, Typography} from '@mui/material';
+import {Box, Button, SvgIcon, Typography} from '@mui/material';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import Logo from '../assets/logo-bf-white.png';
 
-export default function Header({username}) {
+// O @mui/icons-material não tem borracha; ícone "eraser" do Material Design Icons
+function BorrachaIcon(props) {
+    return (
+        <SvgIcon {...props}>
+            <path d="M16.24 3.56 21.19 8.5c.78.79.78 2.05 0 2.84L12 20.53c-1.56 1.56-4.09 1.56-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84L13.41 3.56c.79-.78 2.05-.78 2.83 0M4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l4.24-4.24-4.24-4.24-6.37 4.95z"/>
+        </SvgIcon>
+    );
+}
+
+export default function Header({username, onLimpar, disabled}) {
     return (
         <Box
             component="header"
@@ -46,8 +55,32 @@ export default function Header({username}) {
             {/* Centro: logo */}
             <img src={Logo} alt="Bandfashion" style={{display: 'block', height: 36, width: 'auto'}}/>
 
-            {/* Direita: espaço para equilibrar o centro */}
-            <Box/>
+            {/* Direita: limpar busca */}
+            <Box sx={{justifySelf: 'end', minWidth: 0}}>
+                {onLimpar && (
+                    <Button
+                        onClick={onLimpar}
+                        disabled={disabled}
+                        startIcon={<BorrachaIcon/>}
+                        aria-label="Limpar busca"
+                        sx={{
+                            color: 'white',
+                            textTransform: 'none',
+                            fontWeight: 500,
+                            borderRadius: 999,
+                            px: {xs: 1, sm: 1.5},
+                            minWidth: 0,
+                            backgroundColor: 'rgba(255, 255, 255, 0.16)',
+                            '&:hover': {backgroundColor: 'rgba(255, 255, 255, 0.28)'},
+                            '&.Mui-disabled': {color: 'rgba(255, 255, 255, 0.5)'},
+                            fontSize: {xs: 13, sm: 14},
+                            '& .MuiButton-startIcon': {mr: 0.5, ml: 0},
+                        }}
+                    >
+                        Limpar
+                    </Button>
+                )}
+            </Box>
         </Box>
     );
 }
