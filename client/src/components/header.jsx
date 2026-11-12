@@ -22,7 +22,12 @@ export default function Header({username, onLimpar, disabled}) {
                 columnGap: 1.5,
                 background: 'linear-gradient(135deg, #CB3B31 0%, #a52a22 100%)',
                 color: 'white',
+                // topo extra = barra de status do iPhone (0 onde não existe), para o degradê cobri-la
                 padding: {xs: '12px 16px', sm: '16px 30px'},
+                paddingTop: {
+                    xs: 'calc(12px + env(safe-area-inset-top))',
+                    sm: 'calc(16px + env(safe-area-inset-top))',
+                },
                 borderRadius: '0 0 20px 20px',
                 boxShadow: '0 4px 16px rgba(203, 59, 49, 0.25)',
             }}

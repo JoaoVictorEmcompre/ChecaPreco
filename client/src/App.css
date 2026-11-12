@@ -5,3 +5,22 @@
     padding: 0;
     font-family: "Poppins", sans-serif;
 }
+
+/* iPhone (PWA instalado): a barra de status é translúcida e o app ocupa a tela toda.
+   Nas telas com header, o próprio header se estende por baixo da barra (mesmo degradê).
+   Nas demais (ex.: login), uma faixa vermelha ocupa essa área. */
+body:not(:has(header)) {
+    padding-top: env(safe-area-inset-top);
+}
+
+body:not(:has(header))::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top);
+    background: linear-gradient(135deg, #CB3B31 0%, #a52a22 100%);
+    z-index: 3000;
+    pointer-events: none;
+}

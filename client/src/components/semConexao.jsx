@@ -44,6 +44,14 @@ export default function SemConexao({onReconectou}) {
             }}
         >
             <Box
+                aria-hidden="true"
+                sx={{
+                    position: 'absolute', top: 0, left: 0, right: 0,
+                    height: 'env(safe-area-inset-top)',
+                    background: 'linear-gradient(135deg, #CB3B31 0%, #a52a22 100%)',
+                }}
+            />
+            <Box
                 sx={{
                     width: 96, height: 96, borderRadius: '50%',
                     backgroundColor: '#fdecea', color: '#CB3B31',
